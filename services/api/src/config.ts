@@ -17,6 +17,9 @@ const ConfigSchema = z.object({
     .default(10 * 60 * 1000),
   // Optimistic-append retry budget under contention (D1-05) before surfacing a typed conflict.
   MAX_APPEND_ATTEMPTS: z.coerce.number().int().min(1).default(3),
+  // The web app's origin, allowed by CORS (D3-05) — never a wildcard. The browser on :5200 calls
+  // the API on :5210 (SSE + command POSTs); only this origin gets a permissive ACAO.
+  WEB_ORIGIN: z.string().default("http://localhost:5200"),
 });
 
 export type Config = Readonly<z.infer<typeof ConfigSchema>>;

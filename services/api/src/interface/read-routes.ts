@@ -1,15 +1,14 @@
-import { ShowId } from "@open-ticket/contracts";
-import type { AvailabilityView, SeatMapView } from "@open-ticket/contracts";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
-import { availabilityAsOf, seatMapAsOf } from "../application/index.ts";
 import type { Clock, Projector } from "../application/index.ts";
 
+import { buildAvailabilityView, buildSeatMapView } from "./views.ts";
+
 /**
- * The read side over HTTP (interface layer, thin): pure reads off the projection. Each handler gets
- * the show's raw SeatMap from the projector, resolves effective status against the injected clock
- * (D2-04 lazy expiry — never `Date.now()`), and shapes a contract DTO with `asOf`. It imports only
- * application (projector + queries) and contracts (DTOs), never infrastructure. No business logic.
+ * The read side over HTTP (interface layer, thin): pure reads off the projection. Each handler
+ * gets the show's raw SeatMap from the projector, resolves effective status against the injected
+ * clock (D2-04 lazy expiry — never `Date.now()`), and shapes a contract DTO with `asOf` via the
+ * shared view builders. Imports only application + contracts, never infrastructure. No business logic.
  */
 export interface ReadDeps {
   readonly projector: Projector;
@@ -20,34 +19,17 @@ export function registerReadRoutes(server: FastifyInstance, deps: ReadDeps): voi
   server.get<{ Params: { showId: string } }>("/shows/:showId/seats", (request, reply) => {
     const guard = notReadable(deps, request, reply);
     if (guard) return guard;
-
-    const { showId } = request.params;
-    const view: SeatMapView = {
-      showId: ShowId.parse(showId),
-      asOf: deps.projector.asOf(),
-      // getSeatMap is defined here — notReadable already 404'd an unseen show.
-      seats: [
-        ...seatMapAsOf(deps.projector.getSeatMap(showId) ?? { seats: new Map() }, deps.clock.now()),
-      ],
-    };
-    return reply.status(200).send(view);
+    return reply
+      .status(200)
+      .send(buildSeatMapView(deps.projector, deps.clock, request.params.showId));
   });
 
   server.get<{ Params: { showId: string } }>("/shows/:showId", (request, reply) => {
     const guard = notReadable(deps, request, reply);
     if (guard) return guard;
-
-    const { showId } = request.params;
-    const counts = availabilityAsOf(
-      deps.projector.getSeatMap(showId) ?? { seats: new Map() },
-      deps.clock.now(),
-    );
-    const view: AvailabilityView = {
-      showId: ShowId.parse(showId),
-      asOf: deps.projector.asOf(),
-      ...counts,
-    };
-    return reply.status(200).send(view);
+    return reply
+      .status(200)
+      .send(buildAvailabilityView(deps.projector, deps.clock, request.params.showId));
   });
 }
 

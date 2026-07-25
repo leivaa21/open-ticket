@@ -20,4 +20,6 @@ export type {
 } from "./event-log.ts";
 export { microtaskScheduler, subscribe } from "./subscription.ts";
 export type { Scheduler, SubscribeOptions, Subscription } from "./subscription.ts";
+export { Broadcaster } from "./broadcaster.ts";
+export type { BroadcastEvents, BroadcastType, LagSnapshot } from "./broadcaster.ts";
 export * from "./projections/index.ts";

@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { ShowId } from "@open-ticket/contracts";
 import type { FastifyInstance } from "fastify";
 
-import { Projector } from "../application/index.ts";
+import { Broadcaster, Projector } from "../application/index.ts";
 import type { Config } from "../config.ts";
 import { InMemoryEventStore, SystemClock, UuidGenerator } from "../infrastructure/index.ts";
 
@@ -19,7 +19,8 @@ import { buildServer } from "./server.ts";
 export function buildApp(config: Config): FastifyInstance {
   const store = new InMemoryEventStore();
   const clock = new SystemClock();
-  const projector = new Projector({ log: store });
+  const broadcaster = new Broadcaster();
+  const projector = new Projector({ log: store, broadcaster });
   return buildServer({
     useCases: {
       store,
@@ -31,6 +32,8 @@ export function buildApp(config: Config): FastifyInstance {
     generateShowId: () => ShowId.parse(randomUUID()),
     projector,
     clock,
+    broadcaster,
+    webOrigin: config.WEB_ORIGIN,
     logger: true,
   });
 }

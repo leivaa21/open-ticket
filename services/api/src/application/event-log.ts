@@ -35,6 +35,8 @@ export type CommitListener = () => void;
 export interface EventLog {
   /** Events with `globalPosition >= fromPosition`, plus the current `head`. */
   readAll(fromPosition: GlobalPosition): Promise<ReadAllResult>;
+  /** The write head synchronously — the next position = count of appended events. For lag reporting. */
+  head(): GlobalPosition;
   /** Registers a commit wake-up; returns an unsubscribe handle. The listener must not throw. */
   onCommitted(listener: CommitListener): () => void;
 }

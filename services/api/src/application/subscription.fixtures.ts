@@ -39,6 +39,10 @@ export class FakeLog implements EventLog {
     });
   }
 
+  head(): number {
+    return this.log.length;
+  }
+
   onCommitted(listener: () => void): () => void {
     this.listeners.add(listener);
     return () => {
