@@ -11,3 +11,12 @@ export { commitWithRetry } from "./optimistic.ts";
 export type { CommitPlan, PlanResult } from "./optimistic.ts";
 export { confirmPurchase, releaseHold, reserveSeats, scheduleShow } from "./use-cases.ts";
 export type { CommitOutcome, ReserveOutcome, UseCaseDeps } from "./use-cases.ts";
+export type {
+  CommitListener,
+  EventLog,
+  GlobalEvent,
+  GlobalPosition,
+  ReadAllResult,
+} from "./event-log.ts";
+export { microtaskScheduler, subscribe } from "./subscription.ts";
+export type { Scheduler, SubscribeOptions, Subscription } from "./subscription.ts";
