@@ -24,10 +24,10 @@ describe("InMemoryEventStore — EventStoreDB fidelity (D1-04)", () => {
     const store = new InMemoryEventStore();
 
     const first = await store.appendToStream("show-1", NO_STREAM, [scheduledFact()]);
-    expect(first.revision).toBe(0);
+    expect(first).toEqual({ revision: 0, globalPosition: 0 });
 
     const second = await store.appendToStream("show-1", 0, [heldFact("h1", "buyer", 999, "A1")]);
-    expect(second.revision).toBe(1);
+    expect(second).toEqual({ revision: 1, globalPosition: 1 });
 
     const read = await store.readStream("show-1");
     expect(read.revision).toBe(1);

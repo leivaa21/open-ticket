@@ -53,7 +53,10 @@ export class InMemoryEventStore implements EventStore, EventLog {
     );
     this.notifyCommitted();
 
-    return Promise.resolve({ revision: current + newFacts.length });
+    return Promise.resolve({
+      revision: current + newFacts.length,
+      globalPosition: base + newFacts.length - 1, // the last appended event's global position
+    });
   }
 
   readAll(fromPosition: number): Promise<ReadAllResult> {

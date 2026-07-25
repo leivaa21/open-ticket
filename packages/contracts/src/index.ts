@@ -5,10 +5,11 @@
  * them. A shape lives here once — it must not be re-declared in the API or the app.
  *
  * Layout:
- *   - `ids.ts`      — branded id + primitive value schemas (ShowId, SeatId, SeatIdList, …)
- *   - `commands.ts` — the four M1 commands + the `Command` discriminated union
- *   - `events.ts`   — the five M1 event facts + the `DomainEventFact` discriminated union
- *   - this file     — the persistence envelope + re-exports
+ *   - `ids.ts`         — branded id + primitive value schemas (ShowId, SeatId, SeatIdList, …)
+ *   - `commands.ts`    — the four M1 commands + the `Command` discriminated union
+ *   - `events.ts`      — the five M1 event facts + the `DomainEventFact` discriminated union
+ *   - `read-models.ts` — the read API DTOs (SeatMapView, AvailabilityView) with `asOf`
+ *   - this file        — the persistence envelope + re-exports
  */
 
 import type { DomainEventFact } from "./events.ts";
@@ -16,6 +17,7 @@ import type { DomainEventFact } from "./events.ts";
 export * from "./ids.ts";
 export * from "./commands.ts";
 export * from "./events.ts";
+export * from "./read-models.ts";
 
 /**
  * The envelope wrapping every persisted domain event. `type` discriminates the payload,

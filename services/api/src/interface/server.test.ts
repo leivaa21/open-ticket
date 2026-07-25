@@ -9,7 +9,7 @@ describe("health", () => {
     const response = await server.inject({ method: "GET", url: "/health" });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toEqual({ status: "ok" });
+    expect(response.json()).toEqual({ status: "ok", projection: "healthy" });
   });
 });
 
@@ -40,7 +40,8 @@ describe("the reservation flow over HTTP (schedule → reserve → confirm)", ()
       url: `/shows/${showId}/reservations/${holdId}/confirmation`,
     });
     expect(confirmed.statusCode).toBe(200);
-    expect(confirmed.json()).toEqual({ status: "confirmed" });
+    expect(confirmed.json()).toMatchObject({ status: "confirmed" });
+    expect(confirmed.json<{ commitPosition: number }>().commitPosition).toBeGreaterThanOrEqual(0);
   });
 
   it("releases a hold, freeing the seat for another reservation", async () => {
@@ -59,7 +60,8 @@ describe("the reservation flow over HTTP (schedule → reserve → confirm)", ()
       url: `/shows/${showId}/reservations/${holdId}`,
     });
     expect(released.statusCode).toBe(200);
-    expect(released.json()).toEqual({ status: "released" });
+    expect(released.json()).toMatchObject({ status: "released" });
+    expect(released.json<{ commitPosition: number }>().commitPosition).toBeGreaterThanOrEqual(0);
 
     // The seat is available again.
     const reReserved = await server.inject({

@@ -11,7 +11,7 @@ import type { DecideResult } from "../domain/index.ts";
 
 import { commitWithRetry } from "./optimistic.ts";
 import type { PlanResult } from "./optimistic.ts";
-import type { Clock, EventStore, IdGenerator } from "./ports.ts";
+import type { AppendResult, Clock, EventStore, IdGenerator } from "./ports.ts";
 import type { UseCaseResult } from "./results.ts";
 
 /** The ports and policy a use case needs. Composed once at the edge (PR4); tests pass fakes. */
@@ -24,7 +24,10 @@ export interface UseCaseDeps {
 }
 
 export interface CommitOutcome {
+  /** Per-stream revision of the last appended event. */
   readonly revision: number;
+  /** Global `$all` commit position — compare to a read's `asOf` for read-your-writes (D2-05). */
+  readonly commitPosition: number;
 }
 export interface ReserveOutcome extends CommitOutcome {
   readonly holdId: HoldId;
@@ -57,7 +60,11 @@ export function reserveSeats(
       now,
       newHold: { holdId, expiresAt: now + deps.holdTtlMs },
     });
-    return toPlan(result, (revision) => ({ holdId, revision }));
+    return toPlan(result, (append) => ({
+      holdId,
+      revision: append.revision,
+      commitPosition: append.globalPosition,
+    }));
   });
 }
 
@@ -80,10 +87,13 @@ export function releaseHold(
 }
 
 /** Bridge a domain `DecideResult` into an optimistic-loop `PlanResult` with a value factory. */
-function toPlan<T>(result: DecideResult, toValue: (revision: number) => T): PlanResult<T> {
+function toPlan<T>(result: DecideResult, toValue: (append: AppendResult) => T): PlanResult<T> {
   return result.ok
     ? { ok: true, plan: { events: result.events, toValue } }
     : { ok: false, error: result.error };
 }
 
-const toRevision = (revision: number): CommitOutcome => ({ revision });
+const toRevision = (append: AppendResult): CommitOutcome => ({
+  revision: append.revision,
+  commitPosition: append.globalPosition,
+});

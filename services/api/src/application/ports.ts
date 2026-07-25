@@ -19,8 +19,13 @@ export interface ReadResult {
 }
 
 export interface AppendResult {
-  /** The stream's new last revision after the append. */
+  /** The stream's new last revision after the append (per-stream, optimistic concurrency). */
   readonly revision: number;
+  /**
+   * The global `$all` position of the LAST appended event — the write's commit position. A reader
+   * comparing a projection's `asOf` to this knows whether its write is visible yet (D2-05).
+   */
+  readonly globalPosition: number;
 }
 
 /**

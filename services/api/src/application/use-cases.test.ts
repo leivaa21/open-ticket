@@ -15,7 +15,7 @@ describe("scheduleShow use case", () => {
   it("creates the stream, its first event landing at revision 0", async () => {
     const result = await scheduleShow(makeDeps(), scheduleCmd("show-1", "A1", "A2"));
 
-    expect(result).toEqual({ ok: true, value: { revision: 0 } });
+    expect(result).toEqual({ ok: true, value: { revision: 0, commitPosition: 0 } });
   });
 
   it("passes a domain rejection through without appending", async () => {
@@ -33,7 +33,10 @@ describe("reserveSeats use case", () => {
 
     const result = await reserveSeats(deps, reserveCmd("show-1", "alice", "A1"));
 
-    expect(result).toEqual({ ok: true, value: { holdId: "hold-1", revision: 1 } });
+    expect(result).toEqual({
+      ok: true,
+      value: { holdId: "hold-1", revision: 1, commitPosition: 1 },
+    });
   });
 
   it("passes ShowNotFound through when the show was never scheduled", async () => {
@@ -58,7 +61,7 @@ describe("confirmPurchase use case", () => {
 
     const result = await confirmPurchase(deps, confirmCmd("show-1", "hold-1"));
 
-    expect(result).toEqual({ ok: true, value: { revision: 2 } });
+    expect(result).toEqual({ ok: true, value: { revision: 2, commitPosition: 2 } });
   });
 
   it("passes HoldNotFound through for an unknown hold", async () => {
@@ -77,7 +80,7 @@ describe("releaseHold use case", () => {
 
     const result = await releaseHold(deps, releaseCmd("show-1", "hold-1"));
 
-    expect(result).toEqual({ ok: true, value: { revision: 2 } });
+    expect(result).toEqual({ ok: true, value: { revision: 2, commitPosition: 2 } });
   });
 
   it("passes HoldNotFound through for an unknown hold", async () => {

@@ -4,14 +4,14 @@ import { reconstitute } from "../domain/index.ts";
 import type { DomainError, ShowState } from "../domain/index.ts";
 
 import { ConcurrencyError } from "./ports.ts";
-import type { EventStore } from "./ports.ts";
+import type { AppendResult, EventStore } from "./ports.ts";
 import { conflict, rejectWith, succeed } from "./results.ts";
 import type { UseCaseResult } from "./results.ts";
 
-/** What a planned command wants to append, plus how to shape the success value from the new revision. */
+/** What a planned command wants to append, plus how to shape the success value from the append. */
 export interface CommitPlan<T> {
   readonly events: readonly DomainEventFact[];
-  readonly toValue: (revision: number) => T;
+  readonly toValue: (append: AppendResult) => T;
 }
 
 export type PlanResult<T> =
@@ -40,8 +40,8 @@ export async function commitWithRetry<T>(
     if (!planned.ok) return rejectWith(planned.error);
 
     try {
-      const { revision } = await store.appendToStream(streamId, read.revision, planned.plan.events);
-      return succeed(planned.plan.toValue(revision));
+      const append = await store.appendToStream(streamId, read.revision, planned.plan.events);
+      return succeed(planned.plan.toValue(append));
     } catch (error) {
       if (error instanceof ConcurrencyError) continue;
       throw error;
