@@ -1,8 +1,8 @@
 import { loadConfig } from "./config.ts";
-import { buildServer } from "./interface/server.ts";
+import { buildApp } from "./interface/app.ts";
 
 const config = loadConfig();
-const server = buildServer();
+const server = buildApp(config);
 
 try {
   await server.listen({ port: config.PORT, host: config.HOST });
