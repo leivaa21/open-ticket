@@ -8,15 +8,18 @@
 > security, docs, git) apply here in full; this file only adds what's specific to this project.
 > Read this file before every task and re-read the **Current state** line.
 
-> **Current state (2026-07-25):** **M1 complete and merged — the event-sourced write side
-> works.** Four PRs shipped through the implementer → reviewer loop: contracts (commands +
-> events), the pure Show aggregate + no-double-sell invariant, the application layer + in-memory
-> `EventStore` (optimistic-retry use cases), and the thin Fastify HTTP surface. 84 tests, audit
-> clean. **Reality gate passed:** against the real running server, 20 genuinely concurrent
-> reservations for one seat → exactly 1×201, 19×409 `SeatsUnavailable`, no double-sell, no 500.
-> The store is in-memory behind an EventStoreDB-shaped port. **Next: M2 — projections + a read
-> API** (`GET` seat map / availability), documenting the consistency boundary. Keep this line
-> current after every merged slice.
+> **Current state (2026-07-26):** **M1 + M2 complete and merged — a full CQRS loop works.**
+> M1: the event-sourced write side (Show aggregate + no-double-sell invariant, optimistic-retry
+> use cases, thin HTTP). M2: the read side — a positioned `$all` log + catch-up subscription, a
+> seat-map + availability **projection** fed asynchronously, and `GET` endpoints served
+> **eventually-consistent** with an `asOf` marker. Reads are **time-aware** (a lazily-expired hold
+> reads available, no sweeper); a dead projection returns 503; **read-your-writes** works via a
+> global `commitPosition` on writes vs `asOf` on reads. 124 tests (99 api + 25 contracts), audit
+> clean, all through the implementer → reviewer loop. **Reality gates passed:** 20 concurrent
+> reservations for one seat → exactly one wins; and the read side flips a seat available → held →
+> sold as the projection catches up, `asOf` tracking `commitPosition`. Store is in-memory behind
+> EventStoreDB-shaped ports. **Next: M3 — the web seat map + the visible dev dashboard (SSE)**,
+> where projection lag goes on screen. Keep this line current after every merged slice.
 
 ## Identity
 
