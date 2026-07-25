@@ -20,3 +20,4 @@ export type {
 } from "./event-log.ts";
 export { microtaskScheduler, subscribe } from "./subscription.ts";
 export type { Scheduler, SubscribeOptions, Subscription } from "./subscription.ts";
+export * from "./projections/index.ts";
