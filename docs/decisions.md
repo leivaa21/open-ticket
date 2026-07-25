@@ -67,3 +67,21 @@ no lag to visualize.
 `404`. The read model is **time-aware for hold liveness** (stores each hold's `expiresAt`,
 resolving held-vs-available against a clock) so it agrees with the domain's lazy expiry without an
 M4 sweeper. Full rationale in [design/m2.md](design/m2.md).
+
+## 2026-07-26 — M3: make it watchable — interactive seat map + dashboard over SSE
+
+**Context:** M1/M2 built a correct, eventually-consistent CQRS system visible only through
+`curl`. The project's thesis is that write contention, read/write asymmetry, and eventual
+consistency become watchable; M3 delivers the on-screen proof.
+**Decision:** an **interactive** Next.js seat map (click to reserve/confirm/release, driving the
+real write API) plus a **full observational dev dashboard** (event feed + projection-lag meter),
+both updated live over **SSE** from an in-process broadcaster fed by the projector. `apps/web` on
+`:5200` reuses the contracts read DTOs; cross-origin is explicit CORS restricted to a configured
+`WEB_ORIGIN` (never `*`). The UI gets a polished, distinctive visual pass — it is the portfolio's
+visible face.
+**Rationale:** interactivity makes the two-tab race demo (open two tabs, race one seat, watch one
+win) the thing that sells the architecture; the dashboard makes projection lag a visible quantity.
+SSE (not WebSockets) because the browser only consumes. The broadcaster keeps the "no message bus"
+non-goal intact.
+**Consequences:** the deliberate projector-throttle control and published load numbers stay M4 —
+M3 proves the visualization, M4 stresses it. Full rationale in [design/m3.md](design/m3.md).
