@@ -5,8 +5,9 @@ race for the same seats; open-ticket proves **zero double-selling** under load �
 on screen: a live seat map plus a dev dashboard where commands arrive, events append, and
 projections catch up in real time.
 
-> **Status: scaffolding.** The monorepo and API skeleton are in place (`/health` live on
-> `:5210`); the domain lands in M1. Not yet deployable as a product.
+> **Status: M1 complete — the write side works.** The event-sourced API (`:5210`) schedules
+> shows and holds/confirms/releases seats with a proven no-double-sell invariant under
+> concurrency. Read models, the web seat map, and load numbers land in M2–M4.
 
 ## Why it exists
 
@@ -22,11 +23,28 @@ git clone git@github.com:leivaa21/open-ticket.git
 cd open-ticket
 pnpm install
 pnpm dev            # api on http://127.0.0.1:5210 (web joins in M3)
-
-curl http://127.0.0.1:5210/health   # {"status":"ok"}
 ```
 
 Requires Node ≥ 24 and pnpm ≥ 11.
+
+### Try the reservation flow
+
+```bash
+# Schedule a show → 201 with a server-generated id
+curl -sX POST localhost:5210/shows -H 'content-type: application/json' \
+  -d '{"seatIds":["A1","A2"]}'                      # {"showId":"…"}
+
+# Hold seat A1 → 201 with a hold id
+curl -sX POST localhost:5210/shows/$SHOW/reservations -H 'content-type: application/json' \
+  -d '{"seatIds":["A1"],"holderId":"buyer-1"}'      # {"holdId":"…"}
+
+# A second buyer racing for A1 → 409, never a double-sell
+curl -sX POST localhost:5210/shows/$SHOW/reservations -H 'content-type: application/json' \
+  -d '{"seatIds":["A1"],"holderId":"buyer-2"}'      # {"error":{"type":"SeatsUnavailable","seatIds":["A1"]}}
+```
+
+Fire 20 of that second call concurrently and exactly one wins — verified against the running
+server, not just in tests.
 
 ## Architecture
 
@@ -57,7 +75,7 @@ apps/web (M3)  ──HTTP / SSE──▶  services/api  ──▶  event store (
 ## Roadmap
 
 - [x] Scaffold — monorepo, API skeleton, `/health`, CI-green
-- [ ] **M1** — Show aggregate + reservation write side (in-memory store), invariants proven by tests
+- [x] **M1** — Show aggregate + reservation write side (in-memory store), invariant proven under concurrency
 - [ ] **M2** — projections + read API, documented consistency boundary
 - [ ] **M3** — web seat map + the visible dev dashboard (SSE)
 - [ ] **M4** — load hardening: published numbers, deliberate-lag demo
