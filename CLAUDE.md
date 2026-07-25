@@ -8,12 +8,15 @@
 > security, docs, git) apply here in full; this file only adds what's specific to this project.
 > Read this file before every task and re-read the **Current state** line.
 
-> **Current state (2026-07-24):** freshly scaffolded — pnpm + Turborepo monorepo
-> (`@open-ticket/contracts`, `@open-ticket/api` on `:5210` with a `/health` probe), all six
-> gates green (test/typecheck/lint/format/build/audit), audit clean via inherited overrides.
-> Nothing of the domain built yet. **Next: M1 — the Show aggregate + reservation write side on
-> an in-memory event store, invariants proven by unit tests** (see `docs/design/m1.md`). Keep
-> this line current after every merged slice.
+> **Current state (2026-07-25):** **M1 complete and merged — the event-sourced write side
+> works.** Four PRs shipped through the implementer → reviewer loop: contracts (commands +
+> events), the pure Show aggregate + no-double-sell invariant, the application layer + in-memory
+> `EventStore` (optimistic-retry use cases), and the thin Fastify HTTP surface. 84 tests, audit
+> clean. **Reality gate passed:** against the real running server, 20 genuinely concurrent
+> reservations for one seat → exactly 1×201, 19×409 `SeatsUnavailable`, no double-sell, no 500.
+> The store is in-memory behind an EventStoreDB-shaped port. **Next: M2 — projections + a read
+> API** (`GET` seat map / availability), documenting the consistency boundary. Keep this line
+> current after every merged slice.
 
 ## Identity
 
