@@ -5,9 +5,11 @@ race for the same seats; open-ticket proves **zero double-selling** under load �
 on screen: a live seat map plus a dev dashboard where commands arrive, events append, and
 projections catch up in real time.
 
-> **Status: M1 complete — the write side works.** The event-sourced API (`:5210`) schedules
-> shows and holds/confirms/releases seats with a proven no-double-sell invariant under
-> concurrency. Read models, the web seat map, and load numbers land in M2–M4.
+> **Status: M1 + M2 complete — a full CQRS loop works.** The event-sourced API (`:5210`) has a
+> write side with a proven no-double-sell invariant under concurrency, and an
+> eventually-consistent read side: a seat-map projection fed by a catch-up subscription, served
+> over `GET` with an `asOf` marker and read-your-writes. The web seat map, live dashboard, and
+> load numbers land in M3–M4.
 
 ## Why it exists
 
@@ -41,10 +43,14 @@ curl -sX POST localhost:5210/shows/$SHOW/reservations -H 'content-type: applicat
 # A second buyer racing for A1 → 409, never a double-sell
 curl -sX POST localhost:5210/shows/$SHOW/reservations -H 'content-type: application/json' \
   -d '{"seatIds":["A1"],"holderId":"buyer-2"}'      # {"error":{"type":"SeatsUnavailable","seatIds":["A1"]}}
+
+# Read the seat map — served from a projection, eventually consistent
+curl -s localhost:5210/shows/$SHOW/seats            # {"asOf":1,"seats":[{"seatId":"A1","status":"held"},…]}
 ```
 
 Fire 20 of that second call concurrently and exactly one wins — verified against the running
-server, not just in tests.
+server, not just in tests. The write returns a `commitPosition`; the read exposes `asOf` — once
+`asOf >= commitPosition`, your write is visible (read-your-writes across the CQRS boundary).
 
 ## Architecture
 
@@ -76,7 +82,7 @@ apps/web (M3)  ──HTTP / SSE──▶  services/api  ──▶  event store (
 
 - [x] Scaffold — monorepo, API skeleton, `/health`, CI-green
 - [x] **M1** — Show aggregate + reservation write side (in-memory store), invariant proven under concurrency
-- [ ] **M2** — projections + read API, documented consistency boundary
+- [x] **M2** — async catch-up projections + `GET` read API, eventually consistent with `asOf` / read-your-writes
 - [ ] **M3** — web seat map + the visible dev dashboard (SSE)
 - [ ] **M4** — load hardening: published numbers, deliberate-lag demo
 
