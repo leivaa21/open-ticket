@@ -4,11 +4,14 @@ import { ShowId } from "@open-ticket/contracts";
 import type { EpochMillis } from "@open-ticket/contracts";
 import type { FastifyInstance } from "fastify";
 
-import { Projector } from "../application/index.ts";
+import { Broadcaster, Projector } from "../application/index.ts";
 import type { Clock, ProjectorDeps } from "../application/index.ts";
 import { InMemoryEventStore, UuidGenerator } from "../infrastructure/index.ts";
 
 import { buildServer } from "./server.ts";
+
+/** The web origin allowed in tests — matches the config default. */
+export const TEST_WEB_ORIGIN = "http://localhost:5200";
 
 /**
  * Test-only wiring: a fresh store + projector per server (isolation), a controllable clock so
@@ -30,19 +33,24 @@ export interface TestServer {
   readonly store: InMemoryEventStore;
   readonly clock: MutableClock;
   readonly projector: Projector;
+  readonly broadcaster: Broadcaster;
 }
 
 export interface TestServerOptions {
   readonly holdTtlMs?: number;
   /** Force the projection unhealthy (a throwing reducer) to test the 503 path. */
   readonly reducer?: ProjectorDeps["reducer"];
+  /** SSE heartbeat interval (default 15s); tests keep it short only when needed. */
+  readonly heartbeatMs?: number;
 }
 
 export function buildTestServer(options: TestServerOptions = {}): TestServer {
   const store = new InMemoryEventStore();
   const clock = new MutableClock(1_000);
+  const broadcaster = new Broadcaster();
   const projector = new Projector({
     log: store,
+    broadcaster,
     ...(options.reducer !== undefined ? { reducer: options.reducer } : {}),
   });
   const server = buildServer({
@@ -56,8 +64,11 @@ export function buildTestServer(options: TestServerOptions = {}): TestServer {
     generateShowId: () => ShowId.parse(randomUUID()),
     projector,
     clock,
+    broadcaster,
+    webOrigin: TEST_WEB_ORIGIN,
+    ...(options.heartbeatMs !== undefined ? { heartbeatMs: options.heartbeatMs } : {}),
   });
-  return { server, store, clock, projector };
+  return { server, store, clock, projector, broadcaster };
 }
 
 /** Schedule a show over HTTP and return its server-generated id. */

@@ -1,10 +1,11 @@
+import cors from "@fastify/cors";
 import Fastify, { type FastifyInstance } from "fastify";
 
 import { ConfirmPurchase, ReleaseHold, ReserveSeats, ScheduleShow } from "@open-ticket/contracts";
 import type { ShowId } from "@open-ticket/contracts";
 
 import { confirmPurchase, releaseHold, reserveSeats, scheduleShow } from "../application/index.ts";
-import type { Clock, Projector, UseCaseDeps } from "../application/index.ts";
+import type { Broadcaster, Clock, Projector, UseCaseDeps } from "../application/index.ts";
 
 import {
   bodyRecord,
@@ -13,6 +14,7 @@ import {
   sendValidationError,
 } from "./http-result.ts";
 import { registerReadRoutes } from "./read-routes.ts";
+import { registerSseRoutes } from "./sse-routes.ts";
 
 /**
  * The thin HTTP surface (interface layer): each handler builds a command from route params + body,
@@ -28,6 +30,12 @@ export interface ServerDeps {
   readonly projector: Projector;
   /** Read-side time source (D2-04) — the same instance the write side uses. */
   readonly clock: Clock;
+  /** In-process broadcaster feeding the SSE feeds (D3-03). */
+  readonly broadcaster: Broadcaster;
+  /** The single allowed CORS origin (D3-05) — the web app; never a wildcard. */
+  readonly webOrigin: string;
+  /** SSE heartbeat interval; injectable for tests. */
+  readonly heartbeatMs?: number;
   readonly logger?: boolean;
 }
 
@@ -42,6 +50,14 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   const server = Fastify({ logger: deps.logger ?? false, bodyLimit: INVENTORY_BODY_LIMIT });
   registerErrorHandlers(server);
 
+  // CORS restricted to the web origin (D3-05) — an array origin reflects ACAO only for that origin,
+  // so a disallowed origin gets no permissive header. Never a wildcard.
+  void server.register(cors, {
+    origin: [deps.webOrigin],
+    methods: ["GET", "POST", "DELETE"],
+    allowedHeaders: ["content-type"],
+  });
+
   // Liveness distinguishes "process up" from "projection dead": a crashed projection returns 503 so
   // a readiness probe fails and the read routes are known-degraded, not silently serving stale data.
   server.get("/health", (_request, reply) => {
@@ -52,6 +68,12 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   });
 
   registerReadRoutes(server, { projector: deps.projector, clock: deps.clock });
+  registerSseRoutes(server, {
+    projector: deps.projector,
+    clock: deps.clock,
+    broadcaster: deps.broadcaster,
+    ...(deps.heartbeatMs !== undefined ? { heartbeatMs: deps.heartbeatMs } : {}),
+  });
 
   // POST /shows — schedule a show; server generates and returns its id (201 Created).
   server.post<{ Body: unknown }>("/shows", async (request, reply) => {

@@ -68,6 +68,10 @@ export class InMemoryEventStore implements EventStore, EventLog {
     });
   }
 
+  head(): number {
+    return this.log.length;
+  }
+
   onCommitted(listener: CommitListener): () => void {
     this.listeners.add(listener);
     return () => {
