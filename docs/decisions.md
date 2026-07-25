@@ -48,3 +48,22 @@ consumes (it reserves via HTTP).
 live, auto-reconnect built in. WebSockets' bidirectionality buys nothing here.
 **Consequences:** revisit only if a future feature needs the browser to push over the same
 channel.
+
+## 2026-07-25 — Read side: async catch-up projections, eventually consistent
+
+**Context:** M2 needs to serve a read-heavy domain (thousands watch a seat map, few buy). Options
+were on-demand folds (re-read the stream per request), synchronous inline projections (always
+fresh), or asynchronous catch-up projections (eventually consistent).
+**Decision:** **async catch-up projections** — an in-process projector subscribes to a global
+positioned `$all` log, replays history, then stays live, updating the in-memory read models (the
+seat map and the availability summary). Reads hit the read model and may briefly lag; every read
+exposes an `asOf` position.
+**Rationale:** it's the authentic CQRS/ES shape, mirrors EventStoreDB's `$all` + catch-up
+subscriptions (so the real client is a drop-in), and it's the **only** option where projection
+lag is a real, observable quantity — the entire point of a project whose thesis is "watch eventual
+consistency happen." On-demand folds don't scale with read fan-out; synchronous projections have
+no lag to visualize.
+**Consequences:** reads can be stale (bounded by projector lag); a not-yet-projected show reads
+`404`. The read model is **time-aware for hold liveness** (stores each hold's `expiresAt`,
+resolving held-vs-available against a clock) so it agrees with the domain's lazy expiry without an
+M4 sweeper. Full rationale in [design/m2.md](design/m2.md).
