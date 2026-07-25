@@ -4,14 +4,16 @@ import { ShowId } from "@open-ticket/contracts";
 import type { EpochMillis } from "@open-ticket/contracts";
 import type { FastifyInstance } from "fastify";
 
-import type { Clock } from "../application/index.ts";
+import { Projector } from "../application/index.ts";
+import type { Clock, ProjectorDeps } from "../application/index.ts";
 import { InMemoryEventStore, UuidGenerator } from "../infrastructure/index.ts";
 
 import { buildServer } from "./server.ts";
 
 /**
- * Test-only wiring: a fresh in-memory store per server so tests are isolated, plus a controllable
- * clock so hold-expiry paths are deterministic. Not a `.test.ts`, so Vitest never runs it.
+ * Test-only wiring: a fresh store + projector per server (isolation), a controllable clock so
+ * expiry boundaries are deterministic, and an optional reducer override so a test can force the
+ * projection unhealthy. Not a `.test.ts`, so Vitest never runs it.
  */
 export class MutableClock implements Clock {
   constructor(private millis: number) {}
@@ -27,11 +29,22 @@ export interface TestServer {
   readonly server: FastifyInstance;
   readonly store: InMemoryEventStore;
   readonly clock: MutableClock;
+  readonly projector: Projector;
 }
 
-export function buildTestServer(options: { holdTtlMs?: number } = {}): TestServer {
+export interface TestServerOptions {
+  readonly holdTtlMs?: number;
+  /** Force the projection unhealthy (a throwing reducer) to test the 503 path. */
+  readonly reducer?: ProjectorDeps["reducer"];
+}
+
+export function buildTestServer(options: TestServerOptions = {}): TestServer {
   const store = new InMemoryEventStore();
   const clock = new MutableClock(1_000);
+  const projector = new Projector({
+    log: store,
+    ...(options.reducer !== undefined ? { reducer: options.reducer } : {}),
+  });
   const server = buildServer({
     useCases: {
       store,
@@ -41,8 +54,10 @@ export function buildTestServer(options: { holdTtlMs?: number } = {}): TestServe
       maxAttempts: 3,
     },
     generateShowId: () => ShowId.parse(randomUUID()),
+    projector,
+    clock,
   });
-  return { server, store, clock };
+  return { server, store, clock, projector };
 }
 
 /** Schedule a show over HTTP and return its server-generated id. */

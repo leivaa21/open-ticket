@@ -4,7 +4,7 @@ import { ConfirmPurchase, ReleaseHold, ReserveSeats, ScheduleShow } from "@open-
 import type { ShowId } from "@open-ticket/contracts";
 
 import { confirmPurchase, releaseHold, reserveSeats, scheduleShow } from "../application/index.ts";
-import type { UseCaseDeps } from "../application/index.ts";
+import type { Clock, Projector, UseCaseDeps } from "../application/index.ts";
 
 import {
   bodyRecord,
@@ -12,16 +12,22 @@ import {
   sendRejection,
   sendValidationError,
 } from "./http-result.ts";
+import { registerReadRoutes } from "./read-routes.ts";
 
 /**
  * The thin HTTP surface (interface layer): each handler builds a command from route params + body,
  * parses it against the contract schema at the edge (never trust the client), calls the use case,
- * and maps the typed result to a status. No business logic lives here.
+ * and maps the typed result to a status. No business logic lives here. The read routes (registered
+ * separately) query the projection; `/health` reports the projection's liveness.
  */
 export interface ServerDeps {
   readonly useCases: UseCaseDeps;
   /** Mints a fresh show id on POST /shows (server-generated so clients can't collide). */
   readonly generateShowId: () => ShowId;
+  /** The catch-up projection the read routes serve; `/health` reflects its liveness. */
+  readonly projector: Projector;
+  /** Read-side time source (D2-04) — the same instance the write side uses. */
+  readonly clock: Clock;
   readonly logger?: boolean;
 }
 
@@ -36,7 +42,16 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   const server = Fastify({ logger: deps.logger ?? false, bodyLimit: INVENTORY_BODY_LIMIT });
   registerErrorHandlers(server);
 
-  server.get("/health", () => ({ status: "ok" }));
+  // Liveness distinguishes "process up" from "projection dead": a crashed projection returns 503 so
+  // a readiness probe fails and the read routes are known-degraded, not silently serving stale data.
+  server.get("/health", (_request, reply) => {
+    const healthy = deps.projector.isHealthy();
+    return reply
+      .status(healthy ? 200 : 503)
+      .send({ status: healthy ? "ok" : "degraded", projection: healthy ? "healthy" : "unhealthy" });
+  });
+
+  registerReadRoutes(server, { projector: deps.projector, clock: deps.clock });
 
   // POST /shows — schedule a show; server generates and returns its id (201 Created).
   server.post<{ Body: unknown }>("/shows", async (request, reply) => {
@@ -49,7 +64,9 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
 
     const result = await scheduleShow(deps.useCases, parsed.data);
     return result.ok
-      ? reply.status(201).send({ showId: parsed.data.showId })
+      ? reply
+          .status(201)
+          .send({ showId: parsed.data.showId, commitPosition: result.value.commitPosition })
       : sendRejection(reply, result.error);
   });
 
@@ -72,7 +89,9 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
 
       const result = await reserveSeats(deps.useCases, parsed.data);
       return result.ok
-        ? reply.status(201).send({ holdId: result.value.holdId })
+        ? reply
+            .status(201)
+            .send({ holdId: result.value.holdId, commitPosition: result.value.commitPosition })
         : sendRejection(reply, result.error);
     },
   );
@@ -91,7 +110,9 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
 
       const result = await confirmPurchase(deps.useCases, parsed.data);
       return result.ok
-        ? reply.status(200).send({ status: "confirmed" })
+        ? reply
+            .status(200)
+            .send({ status: "confirmed", commitPosition: result.value.commitPosition })
         : sendRejection(reply, result.error);
     },
   );
@@ -109,7 +130,9 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
 
       const result = await releaseHold(deps.useCases, parsed.data);
       return result.ok
-        ? reply.status(200).send({ status: "released" })
+        ? reply
+            .status(200)
+            .send({ status: "released", commitPosition: result.value.commitPosition })
         : sendRejection(reply, result.error);
     },
   );
