@@ -1,8 +1,8 @@
 import type { SeatMapView } from "@open-ticket/contracts";
 import { describe, expect, it, vi } from "vitest";
 
-import type { EventSourceLike } from "./sse.ts";
-import { parseSeatMapView, seatStreamUrl, subscribeSeatMap } from "./sse.ts";
+import type { EventSourceLike } from "@/lib/sse.ts";
+import { parseSeatMapView, seatStreamUrl, subscribeSeatMap } from "@/lib/sse.ts";
 
 /** A fake EventSource a test can push frames into and inspect. */
 class FakeEventSource implements EventSourceLike {

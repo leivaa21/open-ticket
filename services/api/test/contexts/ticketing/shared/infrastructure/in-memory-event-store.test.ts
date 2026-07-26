@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { ConcurrencyError, NO_STREAM } from "../../commands/application/ports.ts";
+import { ConcurrencyError, NO_STREAM } from "@api/contexts/ticketing/commands/application/ports.ts";
 import { heldFact, scheduleCmd } from "../../commands/application/test-support.ts";
 
-import { InMemoryEventStore } from "./in-memory-event-store.ts";
+import { InMemoryEventStore } from "@api/contexts/ticketing/shared/infrastructure/in-memory-event-store.ts";
 
 const scheduledFact = () => {
   const command = scheduleCmd("show-1", "A1", "A2");

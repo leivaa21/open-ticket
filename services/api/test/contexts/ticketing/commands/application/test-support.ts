@@ -12,11 +12,11 @@ import type {
   ShowId,
 } from "@open-ticket/contracts";
 
-import { InMemoryEventStore } from "../../shared/infrastructure/in-memory-event-store.ts";
-import type { Clock } from "../../shared/application/index.ts";
+import { InMemoryEventStore } from "@api/contexts/ticketing/shared/infrastructure/in-memory-event-store.ts";
+import type { Clock } from "@api/contexts/ticketing/shared/application/index.ts";
 
-import type { IdGenerator } from "./ports.ts";
-import type { UseCaseDeps } from "./use-cases.ts";
+import type { IdGenerator } from "@api/contexts/ticketing/commands/application/ports.ts";
+import type { UseCaseDeps } from "@api/contexts/ticketing/commands/application/use-cases.ts";
 
 /**
  * Test-only builders and fakes for the application layer. The tests are the composition root, so

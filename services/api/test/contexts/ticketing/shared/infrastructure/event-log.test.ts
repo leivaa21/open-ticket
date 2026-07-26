@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { NO_STREAM } from "../../commands/application/ports.ts";
+import { NO_STREAM } from "@api/contexts/ticketing/commands/application/ports.ts";
 import { heldFact, seats } from "../../commands/application/test-support.ts";
 
-import { InMemoryEventStore } from "./in-memory-event-store.ts";
+import { InMemoryEventStore } from "@api/contexts/ticketing/shared/infrastructure/in-memory-event-store.ts";
 
 const scheduledFact = () => ({ type: "ShowScheduled" as const, payload: { seatIds: seats("A1") } });
 

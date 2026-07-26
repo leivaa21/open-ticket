@@ -1,12 +1,19 @@
 import type { DomainEventFact } from "@open-ticket/contracts";
 import { describe, expect, it } from "vitest";
 
-import { InMemoryEventStore } from "../../shared/infrastructure/in-memory-event-store.ts";
+import { InMemoryEventStore } from "@api/contexts/ticketing/shared/infrastructure/in-memory-event-store.ts";
 
-import { ConcurrencyError } from "./ports.ts";
-import type { AppendResult, EventStore, ReadResult } from "./ports.ts";
+import { ConcurrencyError } from "@api/contexts/ticketing/commands/application/ports.ts";
+import type {
+  AppendResult,
+  EventStore,
+  ReadResult,
+} from "@api/contexts/ticketing/commands/application/ports.ts";
 import { heldFact, makeDeps, reserveCmd, scheduleCmd } from "./test-support.ts";
-import { reserveSeats, scheduleShow } from "./use-cases.ts";
+import {
+  reserveSeats,
+  scheduleShow,
+} from "@api/contexts/ticketing/commands/application/use-cases.ts";
 
 /**
  * Wraps a store to script append conflicts (D1-05 retry path). `shouldConflict(attempt)` decides

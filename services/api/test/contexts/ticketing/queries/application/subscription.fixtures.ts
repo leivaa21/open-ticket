@@ -1,4 +1,8 @@
-import type { EventLog, GlobalEvent, ReadAllResult } from "./event-log.ts";
+import type {
+  EventLog,
+  GlobalEvent,
+  ReadAllResult,
+} from "@api/contexts/ticketing/queries/application/event-log.ts";
 import { heldFact } from "../../commands/application/test-support.ts";
 
 /**

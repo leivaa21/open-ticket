@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { confirmCmd, makeDeps, releaseCmd, reserveCmd, scheduleCmd } from "./test-support.ts";
-import type { UseCaseDeps } from "./use-cases.ts";
-import { confirmPurchase, releaseHold, reserveSeats, scheduleShow } from "./use-cases.ts";
+import type { UseCaseDeps } from "@api/contexts/ticketing/commands/application/use-cases.ts";
+import {
+  confirmPurchase,
+  releaseHold,
+  reserveSeats,
+  scheduleShow,
+} from "@api/contexts/ticketing/commands/application/use-cases.ts";
 
 /** A deps bundle whose show "show-1" is already scheduled with seats A1, A2. */
 async function withScheduledShow(): Promise<UseCaseDeps> {

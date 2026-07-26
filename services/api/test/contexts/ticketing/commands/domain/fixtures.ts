@@ -13,11 +13,14 @@ import type {
   ShowId,
 } from "@open-ticket/contracts";
 
-import { decide } from "./decide.ts";
-import type { DecideContext, DecideResult } from "./decide.ts";
-import { evolve } from "./evolve.ts";
-import { initialState } from "./state.ts";
-import type { ShowState } from "./state.ts";
+import { decide } from "@api/contexts/ticketing/commands/domain/decide.ts";
+import type {
+  DecideContext,
+  DecideResult,
+} from "@api/contexts/ticketing/commands/domain/decide.ts";
+import { evolve } from "@api/contexts/ticketing/commands/domain/evolve.ts";
+import { initialState } from "@api/contexts/ticketing/commands/domain/state.ts";
+import type { ShowState } from "@api/contexts/ticketing/commands/domain/state.ts";
 
 /**
  * Test-only builders. The domain trusts typed input (validation ran at the edge in PR1), so tests

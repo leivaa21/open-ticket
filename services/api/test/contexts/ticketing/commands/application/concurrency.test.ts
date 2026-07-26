@@ -1,11 +1,19 @@
 import type { DomainEventFact } from "@open-ticket/contracts";
 import { describe, expect, it } from "vitest";
 
-import { InMemoryEventStore } from "../../shared/infrastructure/in-memory-event-store.ts";
+import { InMemoryEventStore } from "@api/contexts/ticketing/shared/infrastructure/in-memory-event-store.ts";
 
-import type { AppendResult, EventStore, ReadResult } from "./ports.ts";
+import type {
+  AppendResult,
+  EventStore,
+  ReadResult,
+} from "@api/contexts/ticketing/commands/application/ports.ts";
 import { confirmCmd, makeDeps, reserveCmd, scheduleCmd, SequentialIds } from "./test-support.ts";
-import { confirmPurchase, reserveSeats, scheduleShow } from "./use-cases.ts";
+import {
+  confirmPurchase,
+  reserveSeats,
+  scheduleShow,
+} from "@api/contexts/ticketing/commands/application/use-cases.ts";
 
 /**
  * Store wrapper that turns the race deterministic: no `appendToStream` proceeds until every racer

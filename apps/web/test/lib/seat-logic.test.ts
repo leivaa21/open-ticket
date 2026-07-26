@@ -9,8 +9,8 @@ import {
   ownershipOf,
   pruneHolds,
   toRows,
-} from "./seat-logic.ts";
-import type { Holds } from "./seat-logic.ts";
+} from "@/lib/seat-logic.ts";
+import type { Holds } from "@/lib/seat-logic.ts";
 
 const seat = (seatId: string, status: SeatStatus): SeatView => ({ seatId, status }) as SeatView;
 const holds = (...pairs: [string, string][]): Holds => new Map(pairs);

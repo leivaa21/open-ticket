@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { Broadcaster } from "./broadcaster.ts";
+import { Broadcaster } from "@api/contexts/ticketing/shared/application/broadcaster.ts";
 
 describe("Broadcaster (D3-03)", () => {
   it("delivers an emitted payload to a subscribed listener", () => {

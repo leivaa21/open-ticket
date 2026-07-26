@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatSseFrame } from "./sse.ts";
+import { formatSseFrame } from "@api/middlewares/sse.ts";
 
 describe("formatSseFrame — the SSE wire format", () => {
   it("formats an event + JSON data frame terminated by a blank line", () => {

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { decide } from "./decide.ts";
-import { evolve, reconstitute } from "./evolve.ts";
-import { initialState } from "./state.ts";
-import type { ShowState } from "./state.ts";
+import { decide } from "@api/contexts/ticketing/commands/domain/decide.ts";
+import { evolve, reconstitute } from "@api/contexts/ticketing/commands/domain/evolve.ts";
+import { initialState } from "@api/contexts/ticketing/commands/domain/state.ts";
+import type { ShowState } from "@api/contexts/ticketing/commands/domain/state.ts";
 import {
   confirmPurchase,
   ctxAt,
