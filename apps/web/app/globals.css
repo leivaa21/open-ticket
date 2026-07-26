@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+/*
+ * A small, considered dark theme (D3-06). Seat status is conveyed by colour AND a glyph/label
+ * (accessible: never colour alone). A gentle "flash" animation plays when a seat changes status so
+ * live updates are visually satisfying — the "watch it happen" payoff.
+ */
+@theme {
+  --color-canvas: #0a0e17;
+  --color-panel: #111725;
+  --color-line: #1f2937;
+
+  --color-available: #334155;
+  --color-mine: #2dd4bf;
+  --color-held: #f59e0b;
+  --color-sold: #f43f5e;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  background-color: var(--color-canvas);
+  color: #e5e7eb;
+}
+
+@keyframes seat-flash {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 currentColor;
+  }
+  35% {
+    transform: scale(1.12);
+    box-shadow: 0 0 0 4px color-mix(in srgb, currentColor 45%, transparent);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+.seat-flash {
+  animation: seat-flash 600ms ease-out;
+}
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.live-dot {
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
