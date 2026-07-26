@@ -8,18 +8,21 @@
 > security, docs, git) apply here in full; this file only adds what's specific to this project.
 > Read this file before every task and re-read the **Current state** line.
 
-> **Current state (2026-07-26):** **M1 + M2 complete and merged — a full CQRS loop works.**
-> M1: the event-sourced write side (Show aggregate + no-double-sell invariant, optimistic-retry
-> use cases, thin HTTP). M2: the read side — a positioned `$all` log + catch-up subscription, a
-> seat-map + availability **projection** fed asynchronously, and `GET` endpoints served
-> **eventually-consistent** with an `asOf` marker. Reads are **time-aware** (a lazily-expired hold
-> reads available, no sweeper); a dead projection returns 503; **read-your-writes** works via a
-> global `commitPosition` on writes vs `asOf` on reads. 124 tests (99 api + 25 contracts), audit
-> clean, all through the implementer → reviewer loop. **Reality gates passed:** 20 concurrent
-> reservations for one seat → exactly one wins; and the read side flips a seat available → held →
-> sold as the projection catches up, `asOf` tracking `commitPosition`. Store is in-memory behind
-> EventStoreDB-shaped ports. **Next: M3 — the web seat map + the visible dev dashboard (SSE)**,
-> where projection lag goes on screen. Keep this line current after every merged slice.
+> **Current state (2026-07-26):** **M1–M3 complete and merged — the CQRS system is live and
+> watchable.** M1: event-sourced write side (Show aggregate + no-double-sell invariant,
+> optimistic-retry use cases, thin HTTP). M2: async read side — positioned `$all` log + catch-up
+> subscription, a seat-map + availability **projection**, `GET` endpoints served
+> **eventually-consistent** with `asOf` + read-your-writes (time-aware reads, 503 on a dead
+> projection). M3: the **visible layer** — SSE feeds from an in-process broadcaster, a **Next.js**
+> app (`apps/web`, `:5200`) with an **interactive seat map** (click to reserve, live over SSE) and
+> a **dev dashboard** (`/dev`: event feed + projection-lag meter), origin-restricted CORS. 166
+> tests (114 api + 29 contracts + 23 web), audit clean, all through the implementer → reviewer
+> loop. **Reality gates passed:** 20 concurrent reservations for one seat → exactly one wins; the
+> read side flips available → held → sold as the projection catches up; and two SSE "tabs" both
+> see a raced seat go held live while the dashboard streams events + lag. Store in-memory behind
+> EventStoreDB-shaped ports. **Next: M4 — deliberate projector-throttle + published load numbers
+> (via `stampede`) + the real EventStoreDB adapter.** Keep this line current after every merged
+> slice.
 
 ## Identity
 

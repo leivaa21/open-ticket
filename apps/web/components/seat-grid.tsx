@@ -18,14 +18,20 @@ interface SeatGridProps {
 export function SeatGrid({ seats, holds, pending, disabled, onAction }: SeatGridProps) {
   const rows = toRows(seats);
   return (
-    <div className="space-y-2.5">
-      <div className="mx-auto mb-7 w-2/3 rounded-b-xl border-x border-b border-line bg-panel/60 py-1 text-center text-[10px] uppercase tracking-[0.35em] text-slate-600">
-        stage
+    <div className="space-y-3">
+      <div className="relative mx-auto mb-9 w-3/4">
+        <div className="rounded-b-2xl border-x border-b border-line bg-gradient-to-b from-slate-700/40 to-transparent py-1.5 text-center text-[10px] uppercase tracking-[0.4em] text-slate-400">
+          stage
+        </div>
+        <div
+          className="absolute inset-x-6 top-full h-8 bg-gradient-to-b from-slate-500/10 to-transparent blur-md"
+          aria-hidden
+        />
       </div>
       {rows.map((row) => (
-        <div key={row.label} className="flex items-center justify-center gap-3">
-          <span className="w-4 text-right font-mono text-[10px] text-slate-600">{row.label}</span>
-          <div className="flex flex-wrap gap-1.5">
+        <div key={row.label} className="flex items-center justify-center gap-3.5">
+          <span className="w-4 text-right font-mono text-[11px] text-slate-600">{row.label}</span>
+          <div className="flex flex-wrap gap-2">
             {row.seats.map((seat) => (
               <SeatCell
                 key={seat.seatId}
@@ -44,7 +50,7 @@ export function SeatGrid({ seats, holds, pending, disabled, onAction }: SeatGrid
 }
 
 const BASE =
-  "grid h-9 w-9 place-items-center rounded-md border text-xs font-medium tabular-nums transition-colors duration-300 outline-none focus-visible:ring-2 focus-visible:ring-slate-400 select-none";
+  "grid h-11 w-11 place-items-center rounded-lg border text-sm font-medium tabular-nums transition-colors duration-300 outline-none focus-visible:ring-2 focus-visible:ring-slate-400 select-none";
 
 function SeatCell({
   seat,

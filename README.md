@@ -5,11 +5,13 @@ race for the same seats; open-ticket proves **zero double-selling** under load �
 on screen: a live seat map plus a dev dashboard where commands arrive, events append, and
 projections catch up in real time.
 
-> **Status: M1 + M2 complete — a full CQRS loop works.** The event-sourced API (`:5210`) has a
-> write side with a proven no-double-sell invariant under concurrency, and an
-> eventually-consistent read side: a seat-map projection fed by a catch-up subscription, served
-> over `GET` with an `asOf` marker and read-your-writes. The web seat map, live dashboard, and
-> load numbers land in M3–M4.
+> **Status: M1–M3 complete — the whole thing is live and watchable.** The event-sourced API
+> (`:5210`) has a write side with a proven no-double-sell invariant under concurrency and an
+> eventually-consistent read side (a seat-map projection fed by a catch-up subscription, served
+> over `GET` with an `asOf` marker and read-your-writes). A **Next.js web app** (`:5200`) makes
+> it visible: an **interactive seat map** you click to reserve — updating live over SSE — and a
+> **dev dashboard** (`/dev`) where the event log streams in and a projection-lag meter shows the
+> read side catching up. Load numbers + the real EventStoreDB adapter land in M4.
 
 ## Why it exists
 
@@ -24,10 +26,13 @@ sourcing — are here because the domain genuinely needs them, not for decoratio
 git clone git@github.com:leivaa21/open-ticket.git
 cd open-ticket
 pnpm install
-pnpm dev            # api on http://127.0.0.1:5210 (web joins in M3)
+pnpm dev            # api on :5210 + web on :5200 (turbo runs both)
 ```
 
-Requires Node ≥ 24 and pnpm ≥ 11.
+Requires Node ≥ 24 and pnpm ≥ 11. Then open **http://localhost:5200** — create a show, click
+seats to reserve them, and watch **http://localhost:5200/dev** stream the event log + projection
+lag live. Open the seat map in two tabs and race for the same seat: exactly one wins, both
+converge — no double-sell, on screen.
 
 ### Try the reservation flow
 
@@ -55,10 +60,10 @@ server, not just in tests. The write returns a `commitPosition`; the read expose
 ## Architecture
 
 ```
-apps/web (M3)  ──HTTP / SSE──▶  services/api  ──▶  event store (in-memory → EventStoreDB)
-   Next.js: seat map              hexagonal + CQRS
-   + dev dashboard                domain · application · infrastructure · interface
-                    both import packages/contracts (commands · events · DTOs, zod)
+apps/web (:5200)  ──HTTP / SSE──▶  services/api (:5210)  ──▶  event store (in-memory → EventStoreDB)
+   Next.js: seat map                 hexagonal + CQRS
+   + dev dashboard                   domain · application · infrastructure · interface
+                      both import packages/contracts (commands · events · DTOs, zod)
 ```
 
 - **`services/api`** — hexagonal, dependency-inward. The **Show** is the aggregate (one show =
@@ -83,8 +88,8 @@ apps/web (M3)  ──HTTP / SSE──▶  services/api  ──▶  event store (
 - [x] Scaffold — monorepo, API skeleton, `/health`, CI-green
 - [x] **M1** — Show aggregate + reservation write side (in-memory store), invariant proven under concurrency
 - [x] **M2** — async catch-up projections + `GET` read API, eventually consistent with `asOf` / read-your-writes
-- [ ] **M3** — web seat map + the visible dev dashboard (SSE)
-- [ ] **M4** — load hardening: published numbers, deliberate-lag demo
+- [x] **M3** — interactive web seat map + the visible dev dashboard, live over SSE
+- [ ] **M4** — load hardening: published numbers, deliberate-lag demo, real EventStoreDB
 
 ---
 

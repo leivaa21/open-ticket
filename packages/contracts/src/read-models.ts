@@ -36,3 +36,25 @@ export const AvailabilityView = z.object({
   sold: z.number().int().nonnegative(),
 });
 export type AvailabilityView = z.infer<typeof AvailabilityView>;
+
+/**
+ * Dashboard SSE DTOs for `GET /dev/stream` (D3-02) — the shapes the API's dev feed produces and the
+ * web dashboard consumes. They live here for the same reason as the read views: the wire shape lives
+ * once (contracts don't fork). `showId` is the raw stream id (a display field), not branded.
+ */
+
+/** `event: appended` — a newly-appended `$all` event. */
+export const DevAppended = z.object({
+  position: z.number().int().nonnegative(),
+  type: z.string(),
+  showId: z.string(),
+});
+export type DevAppended = z.infer<typeof DevAppended>;
+
+/** `event: lag` — the projection's position vs the write head (the lag meter). */
+export const DevLag = z.object({
+  head: z.number().int().nonnegative(),
+  asOf: z.number().int(), // -1 when nothing is projected yet
+  behind: z.number().int().nonnegative(),
+});
+export type DevLag = z.infer<typeof DevLag>;

@@ -85,20 +85,22 @@ export function SeatMapClient({ showId, initial }: { showId: string; initial: Se
   );
 
   return (
-    <main className="mx-auto max-w-3xl px-5 py-8">
+    <main className="mx-auto flex min-h-screen max-w-3xl flex-col px-5 py-10">
       <ShowHeader showId={showId} view={view} live={live} />
 
-      <div className="mt-9">
-        <SeatGrid
-          seats={view.seats}
-          holds={holds}
-          pending={pending}
-          disabled={holderId === ""}
-          onAction={onAction}
-        />
+      <div className="flex flex-1 items-center justify-center py-10">
+        <div className="w-full rounded-2xl border border-line bg-gradient-to-b from-panel/60 to-panel/20 px-6 py-10 shadow-2xl shadow-black/40 sm:px-12">
+          <SeatGrid
+            seats={view.seats}
+            holds={holds}
+            pending={pending}
+            disabled={holderId === ""}
+            onAction={onAction}
+          />
+        </div>
       </div>
 
-      <div className="mt-9 flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <StatusLegend />
         <Link href="/" className="text-xs text-slate-500 transition-colors hover:text-slate-300">
           + new show

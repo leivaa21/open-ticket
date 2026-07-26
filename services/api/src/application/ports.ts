@@ -46,16 +46,20 @@ export interface EventStore {
 /** Thrown by `appendToStream` when the stream moved under an optimistic write (D1-04). */
 export class ConcurrencyError extends Error {
   override readonly name = "ConcurrencyError";
+  // Explicit fields (not constructor parameter properties): the API's dev script runs on Node's
+  // strip-only type stripping, which rejects parameter properties — so `pnpm dev` would crash.
+  readonly streamId: string;
+  readonly expectedRevision: number;
+  readonly actualRevision: number;
 
-  constructor(
-    readonly streamId: string,
-    readonly expectedRevision: number,
-    readonly actualRevision: number,
-  ) {
+  constructor(streamId: string, expectedRevision: number, actualRevision: number) {
     super(
       `concurrency conflict on stream "${streamId}": expected revision ` +
         `${String(expectedRevision)}, found ${String(actualRevision)}`,
     );
+    this.streamId = streamId;
+    this.expectedRevision = expectedRevision;
+    this.actualRevision = actualRevision;
   }
 }
 

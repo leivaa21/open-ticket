@@ -32,7 +32,7 @@ export function ShowHeader({
             className={`live-dot inline-block h-2 w-2 rounded-full ${live ? "bg-mine" : "bg-slate-600"}`}
             aria-hidden
           />
-          {live ? "live" : "connecting…"}
+          {live ? "live" : "reconnecting…"}
           <span className="font-mono text-xs text-slate-600">asOf {view.asOf}</span>
         </span>
         <span className="text-slate-400">
