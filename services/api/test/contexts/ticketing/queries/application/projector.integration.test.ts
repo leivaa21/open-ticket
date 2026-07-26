@@ -2,11 +2,11 @@ import type { DomainEventFact } from "@open-ticket/contracts";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { held, released, scheduled, sold } from "../domain/fixtures.ts";
-import type { SeatMapState } from "../domain/seat-map.ts";
-import { InMemoryEventStore } from "../../shared/infrastructure/in-memory-event-store.ts";
+import type { SeatMapState } from "@api/contexts/ticketing/queries/domain/seat-map.ts";
+import { InMemoryEventStore } from "@api/contexts/ticketing/shared/infrastructure/in-memory-event-store.ts";
 
-import { Projector } from "./projector.ts";
-import { NOT_PROJECTED } from "./read-model-store.ts";
+import { Projector } from "@api/contexts/ticketing/queries/application/projector.ts";
+import { NOT_PROJECTED } from "@api/contexts/ticketing/queries/application/read-model-store.ts";
 
 /** Append one fact to a stream at its current revision (single writer in tests → no conflict). */
 async function append(

@@ -4,14 +4,14 @@ import { ShowId } from "@open-ticket/contracts";
 import type { EpochMillis } from "@open-ticket/contracts";
 import type { FastifyInstance } from "fastify";
 
-import { buildServer } from "../controllers/register.ts";
-import { Projector } from "../contexts/ticketing/queries/application/index.ts";
-import type { ProjectorDeps } from "../contexts/ticketing/queries/application/index.ts";
-import { Broadcaster, type Clock } from "../contexts/ticketing/shared/application/index.ts";
+import { buildServer } from "@api/controllers/register.ts";
+import { Projector } from "@api/contexts/ticketing/queries/application/index.ts";
+import type { ProjectorDeps } from "@api/contexts/ticketing/queries/application/index.ts";
+import { Broadcaster, type Clock } from "@api/contexts/ticketing/shared/application/index.ts";
 import {
   InMemoryEventStore,
   UuidGenerator,
-} from "../contexts/ticketing/shared/infrastructure/index.ts";
+} from "@api/contexts/ticketing/shared/infrastructure/index.ts";
 
 /** The web origin allowed in tests — matches the config default. */
 export const TEST_WEB_ORIGIN = "http://localhost:5200";

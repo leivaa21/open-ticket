@@ -2,8 +2,8 @@ import type { DomainEventFact } from "@open-ticket/contracts";
 import { describe, expect, it } from "vitest";
 
 import { held, expired, released, scheduled, sold } from "./fixtures.ts";
-import { applySeatMap, emptySeatMap } from "./seat-map.ts";
-import type { SeatMapState } from "./seat-map.ts";
+import { applySeatMap, emptySeatMap } from "@api/contexts/ticketing/queries/domain/seat-map.ts";
+import type { SeatMapState } from "@api/contexts/ticketing/queries/domain/seat-map.ts";
 
 /** Fold a whole event sequence from the empty map — the projector's per-show reduction. */
 function fold(events: readonly DomainEventFact[]): SeatMapState {

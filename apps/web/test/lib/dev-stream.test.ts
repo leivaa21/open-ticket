@@ -1,8 +1,8 @@
 import type { DevAppended, DevLag } from "@open-ticket/contracts";
 import { describe, expect, it, vi } from "vitest";
 
-import { devStreamUrl, parseAppended, parseLag, subscribeDevStream } from "./dev-stream.ts";
-import type { EventSourceLike } from "./sse.ts";
+import { devStreamUrl, parseAppended, parseLag, subscribeDevStream } from "@/lib/dev-stream.ts";
+import type { EventSourceLike } from "@/lib/sse.ts";
 
 class FakeEventSource implements EventSourceLike {
   public closed = false;

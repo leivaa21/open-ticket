@@ -1,7 +1,7 @@
 import type { DevAppended, DevLag } from "@open-ticket/contracts";
 import { describe, expect, it } from "vitest";
 
-import { eventTypeColor, lagFraction, lagState, pushEvent } from "./dev-model.ts";
+import { eventTypeColor, lagFraction, lagState, pushEvent } from "@/lib/dev-model.ts";
 
 const appended = (position: number): DevAppended => ({ position, type: "SeatsHeld", showId: "s" });
 const lag = (head: number, asOf: number, behind: number): DevLag => ({ head, asOf, behind });

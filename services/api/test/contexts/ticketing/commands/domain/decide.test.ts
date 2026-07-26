@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { decide } from "./decide.ts";
-import { initialState } from "./state.ts";
+import { decide } from "@api/contexts/ticketing/commands/domain/decide.ts";
+import { initialState } from "@api/contexts/ticketing/commands/domain/state.ts";
 import {
   confirmPurchase,
   ctxAt,

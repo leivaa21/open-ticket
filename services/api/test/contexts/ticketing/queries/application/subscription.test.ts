@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 
-import type { GlobalEvent } from "./event-log.ts";
+import type { GlobalEvent } from "@api/contexts/ticketing/queries/application/event-log.ts";
 import { FakeLog, gatedHandler } from "./subscription.fixtures.ts";
-import { subscribe } from "./subscription.ts";
+import { subscribe } from "@api/contexts/ticketing/queries/application/subscription.ts";
 
 describe("subscribe — catch-up (D2-03)", () => {
   it("replays all historical events from position 0 in order", async () => {

@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { held, scheduled, sold } from "./fixtures.ts";
-import { applySeatMap, emptySeatMap } from "./seat-map.ts";
-import { availabilityAsOf, effectiveStatus, seatMapAsOf } from "./queries.ts";
+import { applySeatMap, emptySeatMap } from "@api/contexts/ticketing/queries/domain/seat-map.ts";
+import {
+  availabilityAsOf,
+  effectiveStatus,
+  seatMapAsOf,
+} from "@api/contexts/ticketing/queries/domain/queries.ts";
 
 // A show A1(held by h1, expires 600), A2(available), B1(sold).
 const state = [
