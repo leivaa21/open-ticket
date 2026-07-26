@@ -1,29 +1,25 @@
-import type { GlobalPosition } from "./event-log.ts";
+import type { DevAppended, DevLag } from "@open-ticket/contracts";
 
 /**
  * An in-process typed broadcaster (D3-03) bridging the projector to SSE subscribers. When the
  * projector applies an event it emits here; SSE handlers subscribe and forward, unsubscribing on
  * disconnect. No message bus — a plain typed emitter (consistent with the "no Kafka/RabbitMQ"
  * non-goal). It lives in the application layer: the projector feeds it, the interface consumes it.
+ *
+ * The `appended`/`lag` payloads ARE the `/dev/stream` wire DTOs, so they reuse the contracts
+ * `DevAppended`/`DevLag` shapes — the API and the web dashboard share one definition (no fork).
  */
 
 /** The projection's position relative to the write head (for the dashboard lag meter). */
-export interface LagSnapshot {
-  /** The write head — the next global position, i.e. the count of appended events. */
-  readonly head: number;
-  /** The global position the projection reflects (D2-05). */
-  readonly asOf: GlobalPosition;
-  /** How many events the projection still trails the head by (`head - (asOf + 1)`, clamped ≥ 0). */
-  readonly behind: number;
-}
+export type LagSnapshot = DevLag;
 
 export interface BroadcastEvents {
   /** A specific show's projection advanced — its seat map should be re-pushed. */
   readonly seatChanged: { readonly showId: string };
   /** A new `$all` event was applied (the dashboard's per-event frame). */
-  readonly appended: { readonly position: number; readonly type: string; readonly showId: string };
+  readonly appended: DevAppended;
   /** The projection lag moved (the dashboard's lag frame). */
-  readonly lag: LagSnapshot;
+  readonly lag: DevLag;
 }
 
 export type BroadcastType = keyof BroadcastEvents;

@@ -13,7 +13,7 @@ export interface EventSourceLike {
 }
 export type EventSourceFactory = (url: string) => EventSourceLike;
 
-const browserEventSource: EventSourceFactory = (url) =>
+export const browserEventSource: EventSourceFactory = (url) =>
   new EventSource(url) as unknown as EventSourceLike;
 
 export function seatStreamUrl(showId: string): string {

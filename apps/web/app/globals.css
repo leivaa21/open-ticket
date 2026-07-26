@@ -58,3 +58,19 @@ body {
 .live-dot {
   animation: live-pulse 1.6s ease-in-out infinite;
 }
+
+/* New dashboard feed rows slide in; existing rows (keyed by position) don't re-animate. */
+@keyframes feed-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.feed-enter {
+  animation: feed-enter 300ms ease-out;
+}

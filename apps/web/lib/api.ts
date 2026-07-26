@@ -30,6 +30,19 @@ export interface Committed {
 
 const showsPath = (showId: string): string => `/shows/${encodeURIComponent(showId)}`;
 
+export type ProjectionHealth = "healthy" | "degraded" | "unknown";
+
+/** Reads `/health`: `unknown` on a network error, `degraded` if the projection is dead (503). */
+export async function checkHealth(): Promise<ProjectionHealth> {
+  try {
+    const response = await fetch(`${API_URL}/health`, { cache: "no-store" });
+    const body = asRecord(await response.json().catch(() => undefined));
+    return body?.projection === "healthy" ? "healthy" : "degraded";
+  } catch {
+    return "unknown";
+  }
+}
+
 /** Server-side (RSC) initial fetch — always fresh, never cached, so first paint reflects `asOf`. */
 export function getSeatMap(showId: string): Promise<ApiResult<SeatMapView>> {
   return send(`${showsPath(showId)}/seats`, { cache: "no-store" }, asSeatMapView);
