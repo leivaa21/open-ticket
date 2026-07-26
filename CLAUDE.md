@@ -33,23 +33,34 @@
 ## Architecture
 
 ```
-apps/web (M3: Next.js — seat map + dev dashboard) ──HTTP/SSE──▶ services/api ──▶ event store
-                                                                     │
+apps/web (Next.js — seat map + dev dashboard) ──HTTP/SSE──▶ services/api ──▶ event store
+                                                                 │
    both import packages/contracts (commands · events · read-model DTOs, zod)
 ```
 
-- **`services/api`** is **hexagonal + CQRS**, dependency-inward (never violate the direction):
-  - `domain/` — pure aggregates + rules. The **Show** is the aggregate; **one show = one
-    consistency boundary = one event stream**. No framework, no I/O, no zod. The invariant "a
-    seat is never sold twice" is enforced here by folding the stream.
-  - `application/` — use cases (`ReserveSeats`, `ConfirmPurchase`, `ReleaseHold`) orchestrating
-    the domain through **ports** (`EventStore`, `Clock`, `IdGenerator`) declared here. Append is
-    optimistic: expected revision, retry on conflict.
-  - `infrastructure/` — adapters. M1 ships an in-memory `EventStore` mirroring **EventStoreDB**
-    semantics (append-with-expected-revision + per-stream read), so the real client is a
-    drop-in swap later.
-  - `interface/` — thin Fastify layer: parse → call use case → map result to status. No
-    business logic in a handler.
+- **`services/api` is CQRS-by-folder** — the command/query split is structural, and each side is
+  its own dependency-inward hexagon. Layout (`src/`):
+  - `app/` — the composition root: `main`, `config`, `composition-root` (wires real adapters),
+    `test-server`.
+  - `controllers/` — thin Fastify route handlers (reservation commands, seat-map queries, SSE
+    streams); `middlewares/` — error→status mapper, CORS, SSE framing.
+  - `contexts/ticketing/` — the one bounded context:
+    - `commands/domain/` — the pure **Show** aggregate; **one show = one consistency boundary =
+      one event stream**; the "never sold twice" invariant is enforced here by folding the
+      stream. No framework, no I/O, no zod.
+    - `commands/application/` — use cases (`ReserveSeats`/`ConfirmPurchase`/`ReleaseHold`) through
+      ports (`EventStore`, `IdGenerator`) declared here; optimistic append, retry on conflict.
+    - `queries/domain/` — the seat-map read model (a pure reducer) + time-aware read logic.
+    - `queries/application/` — the `EventLog` port, the catch-up `subscription`, the `Projector`,
+      the in-memory read-model store, and the read-DTO view builders.
+    - `shared/application/` — the cross-side `Clock` port + the SSE `Broadcaster` (in-process, no
+      external I/O). `shared/infrastructure/` — the adapters that touch the outside: the in-memory
+      `EventStore`/`EventLog` (mirroring **EventStoreDB**, a drop-in swap later) and the system
+      clock / uuid generator.
+  - **Dependency rule (never violate):** domain imports only `@open-ticket/contracts`; application
+    depends on ports; infrastructure implements them; only `app/composition-root` imports concrete
+    adapters. Per-side `infrastructure/` folders don't exist yet — at the in-memory stage the only
+    real infrastructure is shared; they return at M4 with EventStoreDB adapters.
 - **Contracts don't fork.** A command/event/DTO shape lives once in `packages/contracts`
   (zod schema → inferred type); the API validates inbound with it, the app trusts the type.
 
