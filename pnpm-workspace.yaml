@@ -4,14 +4,22 @@ packages:
   - "packages/*"
 
 # Native postinstall build scripts pnpm is allowed to run (supply-chain gate).
-# esbuild powers Vitest/tsup; it's trusted and widely used.
+# esbuild powers Vitest/tsup; it's trusted and widely used. sharp's native build is Next's
+# optional image optimizer, which this app doesn't use — don't build it.
 allowBuilds:
   esbuild: true
+  sharp: false
 
 # Keep `pnpm audit` at zero (workspace policy: even dev-only advisories). Drop each override
 # once the upstream toolchain resolves the patched version on its own.
 #   - esbuild: GHSA-g7r4-m6w7-qqqr (dev-server file read), via tsup/vitest — fixed in 0.28.1.
 #   - brace-expansion: GHSA-mh99-v99m-4gvg (DoS/OOM), via eslint>minimatch — fixed in 5.0.8.
+#   - postcss: GHSA-6g55/r28c/qx2v (source-map path traversal + XSS), via next — fixed in 8.5.18
+#     (2026-07-26; drop once next bumps its postcss).
+#   - sharp: GHSA-f88m-g3jw-g9cj (libvips), via next's optional image optimizer (unused here) —
+#     fixed in 0.35.0 (2026-07-26; drop once next bumps sharp).
 overrides:
   esbuild: ">=0.28.1"
   brace-expansion: ">=5.0.8"
+  postcss: ">=8.5.18"
+  sharp: ">=0.35.0"
