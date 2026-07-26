@@ -85,3 +85,25 @@ SSE (not WebSockets) because the browser only consumes. The broadcaster keeps th
 non-goal intact.
 **Consequences:** the deliberate projector-throttle control and published load numbers stay M4 —
 M3 proves the visualization, M4 stresses it. Full rationale in [design/m3.md](design/m3.md).
+
+## 2026-07-26 — CQRS by folder: commands/queries as separate hexagons
+
+**Context:** the API had grown a flat `domain/ application/ infrastructure/ interface/` layout.
+For a project whose thesis _is_ CQRS, the command/query split was only conceptual — invisible in
+the tree.
+**Decision:** reorganize `services/api/src` so the split is **structural**: `app/` (composition
+root, config, main), `controllers/` + `middlewares/` (the HTTP edge), and
+`contexts/ticketing/{commands,queries}/{domain,application,…}` — each side its own
+dependency-inward hexagon. Cross-side, in-process collaborators (the `Clock` port, the SSE
+`Broadcaster`) live in `contexts/ticketing/shared/application/`; the adapters that touch the
+outside (the in-memory `EventStore`/`EventLog`, the system clock + uuid generator) live in
+`shared/infrastructure/`.
+**Rationale:** the folder tree now _is_ the architecture diagram — a reader sees the write model
+(aggregate, use cases, optimistic append) and the read model (projections, subscription,
+seat-map) as separate bounded hexagons, which is exactly the story the project tells. Placing the
+read-model store and the broadcaster in `application` (not `infrastructure`) keeps the arrows
+inward: they're in-process, zero-external-I/O machinery, not ports-and-adapters "adapters".
+**Consequences:** per-side `infrastructure/` folders are intentionally absent — at the in-memory
+stage the only real infrastructure is the shared event store; they return at M4 when EventStoreDB
+adapters (and a persistent read-model store) earn a repository/notifier **port**. The move was
+behavior-preserving (no logic change; all 166 tests unchanged and green).
