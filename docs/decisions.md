@@ -107,3 +107,49 @@ inward: they're in-process, zero-external-I/O machinery, not ports-and-adapters 
 stage the only real infrastructure is the shared event store; they return at M4 when EventStoreDB
 adapters (and a persistent read-model store) earn a repository/notifier **port**. The move was
 behavior-preserving (no logic change; all 166 tests unchanged and green).
+
+## 2026-07-30 — Global positions become opaque tokens; projection lag becomes time-based
+
+**Context:** the `EventLog` port defines `GlobalPosition` as a **contiguous 0-based counter** whose
+`head` is literally the event count — a shape the in-memory adapter made feel natural. EventStoreDB's
+`$all` positions are **commit/prepare byte offsets**: monotonic and totally ordered, but not
+contiguous, not counts, and not cheaply convertible into "how many events behind". A faithful
+adapter cannot implement the port as written.
+**Decision:** a position becomes an **opaque token supporting comparison and equality only**
+(serialized as a string in the read DTOs), and **projection lag is reported as `behindMs`** — now
+minus the recorded timestamp of the last applied event, `0` when caught up. `behindEvents` survives
+as an optional field, populated only by adapters that get it for free.
+**Rationale:** read-your-writes (`asOf >= commitPosition`, D2-05) only ever needed a total order, not
+arithmetic — so the correctness story is untouched while the port stops promising something a real
+store can't deliver. Time-based lag means the same thing to every adapter and to a human, and it's
+what production observability actually reports. The alternatives were worse: an adapter-maintained
+counter breaks across restarts and instances (a correctness lie in the one place this project claims
+rigor), and reporting bytes for one adapter and events for another gives the dashboard a unit that
+depends on configuration.
+**Consequences:** a breaking change to the read DTOs and the lag meter, taken deliberately **before**
+the adapter lands so the adapter has an implementable port. The in-memory adapter keeps its counter
+internally — it just stops being part of the contract. Full rationale in [design/m4.md](design/m4.md).
+
+## 2026-07-30 — M4: drive eventual consistency on screen, and make the port swap real
+
+**Context:** M3 made the system watchable but not steerable — an in-memory projector catches up
+instantly, so the lag meter mostly reads zero and eventual consistency stays theoretical on screen.
+Meanwhile "EventStoreDB-shaped ports" (2026-07-24) had never been tested against EventStoreDB.
+**Decision:** ship both in M4. A **projector control panel** — per-event pacing through an awaited
+`pace()` hook, pause/resume, and a background **rebuild that swaps atomically** so reads never go
+down — behind an env flag (`DEV_CONTROLS_ENABLED`, default off, routes unregistered when off). And
+the **real EventStoreDB adapter**, selected by `EVENT_STORE`, with **one port conformance suite run
+against both adapters** and container-backed integration tests in CI.
+**Rationale:** the two halves check each other — the panel is how you _see_ a real store's projection
+lag, and the real store is what makes the lag worth seeing. Per-event pacing (not per-batch, which
+the existing `Scheduler` seam would give) makes lag climb and drain visibly instead of sawtoothing.
+The conformance suite, not the adapter, is the artifact: it's the only thing that proves the swap was
+ever real. Dev controls default off because they are unauthenticated endpoints that can stall the
+read side, in a public repo whose demo someone will deploy.
+**Consequences:** Docker enters the test story (a separate `test:integration` suite keeps `pnpm test`
+infra-free); the new client dependency and network surface get a security-auditor pass before merge.
+Persisted read models stay deferred — a durable log plus rebuild-on-boot already covers restart, and
+a second piece of infrastructure would cost the quickstart more than it buys. **Published load
+numbers move to M5**: numbers measured against an in-memory store would be invalidated by this very
+milestone, so they get measured once, on the real store, with `stampede` — whose contract is
+specified from open-ticket's side in [design/m4.md](design/m4.md). Full rationale there.
