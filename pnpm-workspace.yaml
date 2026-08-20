@@ -13,13 +13,24 @@ allowBuilds:
 # Keep `pnpm audit` at zero (workspace policy: even dev-only advisories). Drop each override
 # once the upstream toolchain resolves the patched version on its own.
 #   - esbuild: GHSA-g7r4-m6w7-qqqr (dev-server file read), via tsup/vitest — fixed in 0.28.1.
-#   - brace-expansion: GHSA-mh99-v99m-4gvg (DoS/OOM), via eslint>minimatch — fixed in 5.0.8.
+#   - brace-expansion: GHSA-mh99-v99m-4gvg (DoS/OOM), via eslint>minimatch — fixed in 5.0.8;
+#     re-raised as GHSA-rgw5-rvv9-x895 (unbounded intermediate expansion) — fixed in 5.0.9
+#     (2026-08-20).
+#   - fast-uri: GHSA-7p8r-x3mc-p8w7 (host confusion via backslash), reached twice through fastify
+#     (via ajv and via fast-json-stringify). The advisory lists a patched floor per major, but this
+#     tree resolves both paths to 4.1.1, so one 4.x floor covers it (2026-08-20; drop once fastify
+#     bumps them).
+#   - nanoid: GHSA-2v37-7h3g-55p8 (custom generators can loop indefinitely), via next>postcss —
+#     fixed in 3.3.18 (2026-08-20; drop once next bumps postcss).
 #   - postcss: GHSA-6g55/r28c/qx2v (source-map path traversal + XSS), via next — fixed in 8.5.18
-#     (2026-07-26; drop once next bumps its postcss).
+#     (2026-07-26); GHSA-fxqj-rqcc-2cmp is the incomplete-fix follow-up — fixed in 8.5.23
+#     (2026-08-20). Drop once next bumps its postcss.
 #   - sharp: GHSA-f88m-g3jw-g9cj (libvips), via next's optional image optimizer (unused here) —
 #     fixed in 0.35.0 (2026-07-26; drop once next bumps sharp).
 overrides:
   esbuild: ">=0.28.1"
-  brace-expansion: ">=5.0.8"
-  postcss: ">=8.5.18"
+  brace-expansion: ">=5.0.9"
+  fast-uri: ">=4.1.2"
+  nanoid: ">=3.3.18"
+  postcss: ">=8.5.23"
   sharp: ">=0.35.0"
