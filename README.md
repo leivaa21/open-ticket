@@ -55,7 +55,7 @@ curl -s localhost:5210/shows/$SHOW/seats            # {"asOf":"1","seats":[{"sea
 
 Fire 20 of that second call concurrently and exactly one wins — verified against the running
 server, not just in tests. Watch the seat map flip `available → held` a moment after the write
-returns: that gap *is* the CQRS read side catching up.
+returns: that gap _is_ the CQRS read side catching up.
 
 The write returns a `commitPosition` and the read exposes an `asOf` marker — both **opaque
 tokens**. Read-your-writes is still "`asOf >= commitPosition` means your write is visible", but
