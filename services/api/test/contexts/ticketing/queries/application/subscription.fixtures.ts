@@ -3,6 +3,8 @@ import type {
   GlobalEvent,
   ReadAllResult,
 } from "@api/contexts/ticketing/queries/application/event-log.ts";
+import type { Position } from "@api/contexts/ticketing/shared/application/index.ts";
+import { LogPosition } from "@api/contexts/ticketing/shared/infrastructure/log-position.ts";
 import { heldFact } from "../../commands/application/test-support.ts";
 
 /**
@@ -26,25 +28,30 @@ export class FakeLog implements EventLog {
   }
 
   private push(): void {
-    const globalPosition = this.log.length;
+    const index = this.log.length;
     this.log.push({
-      ...heldFact(`h${String(globalPosition)}`, "buyer", 999, "A1"),
+      ...heldFact(`h${String(index)}`, "buyer", 999, "A1"),
       streamId: "show-1",
-      revision: globalPosition,
-      globalPosition,
+      revision: index,
+      // Distinct per event and increasing, so a test can assert `behindMs` moved without caring
+      // which event supplied the timestamp.
+      recordedAt: 1_000 + index,
+      position: new LogPosition(index),
     });
   }
 
-  readAll(fromPosition: number): Promise<ReadAllResult> {
+  /** Exclusive, like the real port: everything strictly after `after` (`null` = from the start). */
+  readAll(after: Position | null): Promise<ReadAllResult> {
     this.readAllCalls += 1;
-    return Promise.resolve({
-      events: this.log.slice(Math.max(0, fromPosition)),
-      head: this.log.length,
-    });
+    return Promise.resolve({ events: this.log.slice(indexAfter(after)), head: this.head() });
   }
 
-  head(): number {
-    return this.log.length;
+  head(): Position | null {
+    return this.log.at(-1)?.position ?? null;
+  }
+
+  behindEvents(after: Position | null): number {
+    return this.log.length - indexAfter(after);
   }
 
   onCommitted(listener: () => void): () => void {
@@ -53,6 +60,22 @@ export class FakeLog implements EventLog {
       this.listeners.delete(listener);
     };
   }
+}
+
+/** The index a position points at, or `null` for "nothing applied yet" — for test assertions. */
+export function appliedIndex(position: Position | null): number | null {
+  return position === null ? null : positionIndex(position);
+}
+
+/** The array index a position points at — the fixture's own knowledge of its own log. */
+function positionIndex(position: Position): number {
+  if (!(position instanceof LogPosition)) throw new TypeError("not a FakeLog position");
+  return position.index;
+}
+
+/** Index of the first event strictly after `after`. */
+function indexAfter(after: Position | null): number {
+  return after === null ? 0 : positionIndex(after) + 1;
 }
 
 interface Signal {
@@ -91,8 +114,8 @@ export function gatedHandler(gateAt: number): GatedHandler {
   const handler = async (event: GlobalEvent): Promise<void> => {
     active += 1;
     maxActive = Math.max(maxActive, active);
-    applied.push(event.globalPosition);
-    if (event.globalPosition === gateAt) {
+    applied.push(positionIndex(event.position));
+    if (positionIndex(event.position) === gateAt) {
       reached.fire();
       await release.promise;
     }

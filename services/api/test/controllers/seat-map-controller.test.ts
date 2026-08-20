@@ -1,21 +1,31 @@
 import { AvailabilityView, SeatMapView } from "@open-ticket/contracts";
 import { describe, expect, it } from "vitest";
 
+import { isAtOrAfter } from "@api/contexts/ticketing/shared/application/index.ts";
+import { LogPosition } from "@api/contexts/ticketing/shared/infrastructure/log-position.ts";
+
 import { buildTestServer, scheduleShowVia } from "../app/test-server.ts";
 import type { TestServer } from "../app/test-server.ts";
+
+/**
+ * Turn a wire token back into a position. A CLIENT may not do this — tokens are opaque (D4-01) —
+ * but this test owns the adapter that issued it, and read-your-writes has to be asserted through
+ * the comparator that defines it rather than by comparing two strings.
+ */
+const positionOf = (token: string): LogPosition => new LogPosition(Number(token));
 
 /** POST a reservation and return the parsed body (holdId + commitPosition). */
 async function reserve(
   ts: TestServer,
   showId: string,
   seatIds: readonly string[],
-): Promise<{ holdId: string; commitPosition: number }> {
+): Promise<{ holdId: string; commitPosition: string }> {
   const response = await ts.server.inject({
     method: "POST",
     url: `/shows/${showId}/reservations`,
     payload: { seatIds, holderId: "buyer" },
   });
-  return response.json<{ holdId: string; commitPosition: number }>();
+  return response.json<{ holdId: string; commitPosition: string }>();
 }
 
 const seatStatus = (view: SeatMapView, seatId: string) =>
@@ -35,7 +45,7 @@ describe("GET read API — projection over HTTP (D2-05)", () => {
       { seatId: "A1", status: "available" },
       { seatId: "A2", status: "available" },
     ]);
-    expect(initialView.asOf).toBeGreaterThanOrEqual(0);
+    expect(initialView.asOf).toEqual(expect.any(String));
 
     // Reserve A1 → read-your-writes: asOf catches up past the write's commitPosition.
     const { holdId, commitPosition } = await reserve(ts, showId, ["A1"]);
@@ -45,7 +55,9 @@ describe("GET read API — projection over HTTP (D2-05)", () => {
     );
     expect(seatStatus(held, "A1")).toBe("held");
     expect(seatStatus(held, "A2")).toBe("available");
-    expect(held.asOf).toBeGreaterThanOrEqual(commitPosition);
+    // Read-your-writes across the CQRS boundary (D2-05): the projection has reached the write's
+    // commit position. Asserted through `Position.compareTo`, which is where ordering now lives.
+    expect(isAtOrAfter(ts.projector.asOf(), positionOf(commitPosition))).toBe(true);
 
     // Availability summary reflects it.
     const summary = AvailabilityView.parse(

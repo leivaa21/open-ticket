@@ -1,41 +1,47 @@
 import { describe, expect, it } from "vitest";
 
 import type { GlobalEvent } from "@api/contexts/ticketing/queries/application/event-log.ts";
-import { FakeLog, gatedHandler } from "./subscription.fixtures.ts";
 import { subscribe } from "@api/contexts/ticketing/queries/application/subscription.ts";
+import { LogPosition } from "@api/contexts/ticketing/shared/infrastructure/log-position.ts";
+import { appliedIndex, FakeLog, gatedHandler } from "./subscription.fixtures.ts";
+
+/** The index of the event a handler was just handed — positions are opaque outside the adapter. */
+const indexOf = (event: GlobalEvent): number => appliedIndex(event.position) ?? -1;
 
 describe("subscribe — catch-up (D2-03)", () => {
-  it("replays all historical events from position 0 in order", async () => {
+  it("replays the whole log in order when started from null", async () => {
     const log = new FakeLog();
     log.seed(3);
     const applied: number[] = [];
 
     const sub = subscribe({
       log,
-      from: 0,
-      handler: (event) => void applied.push(event.globalPosition),
+      from: null,
+      handler: (event) => void applied.push(indexOf(event)),
     });
     await sub.settled();
 
     expect(applied).toEqual([0, 1, 2]);
-    expect(sub.position).toBe(3);
+    expect(appliedIndex(sub.position)).toBe(2); // the LAST applied position, not the next to read
     sub.stop();
   });
 
-  it("replays from a mid position, skipping earlier events", async () => {
+  it("resumes strictly AFTER the given position, skipping it and everything before", async () => {
     const log = new FakeLog();
     log.seed(5);
     const applied: number[] = [];
 
+    // Exclusive by design (D4-01): an opaque position has no successor, so a resuming reader can
+    // only say "after the last one I applied" — event 1 here is already applied and must not repeat.
     const sub = subscribe({
       log,
-      from: 2,
-      handler: (event) => void applied.push(event.globalPosition),
+      from: new LogPosition(1),
+      handler: (event) => void applied.push(indexOf(event)),
     });
     await sub.settled();
 
     expect(applied).toEqual([2, 3, 4]);
-    expect(sub.position).toBe(5);
+    expect(appliedIndex(sub.position)).toBe(4);
     sub.stop();
   });
 });
@@ -46,35 +52,38 @@ describe("subscribe — live delivery and lag (D2-03)", () => {
     const applied: number[] = [];
     const sub = subscribe({
       log,
-      from: 0,
-      handler: (event) => void applied.push(event.globalPosition),
+      from: null,
+      handler: (event) => void applied.push(indexOf(event)),
     });
     await sub.settled();
     expect(applied).toEqual([]);
+    expect(sub.position).toBeNull(); // nothing applied yet — not "position 0"
 
     log.commit(); // event 0 arrives live
     await sub.settled();
 
     expect(applied).toEqual([0]);
-    expect(sub.position).toBe(1);
+    expect(appliedIndex(sub.position)).toBe(0);
     sub.stop();
   });
 
-  it("tracks position and lag = head − position", async () => {
+  it("leaves the log able to count what is still unapplied from the subscription's position", async () => {
     const log = new FakeLog();
-    log.seed(5); // head 5
+    log.seed(5);
     const gate = gatedHandler(2);
 
-    const sub = subscribe({ log, from: 0, handler: gate.handler });
+    const sub = subscribe({ log, from: null, handler: gate.handler });
     await gate.reached; // paused mid-apply of event 2 — 0 and 1 are done
 
-    expect(sub.position).toBe(2);
-    expect(await sub.lag()).toBe(3); // 5 − 2
+    expect(appliedIndex(sub.position)).toBe(1);
+    // `behindEvents` is the store's optional courtesy (D4-01), computed from a position it owns —
+    // the subscription itself no longer claims to know how many events "behind" means.
+    expect(log.behindEvents(sub.position)).toBe(3); // events 2, 3, 4
 
     gate.release();
     await sub.settled();
-    expect(sub.position).toBe(5);
-    expect(await sub.lag()).toBe(0);
+    expect(appliedIndex(sub.position)).toBe(4);
+    expect(log.behindEvents(sub.position)).toBe(0);
     sub.stop();
   });
 });
@@ -85,7 +94,7 @@ describe("subscribe — serialized, coalescing pump (D2-03)", () => {
     log.seed(1); // event 0
     const gate = gatedHandler(0); // pause while applying event 0
 
-    const sub = subscribe({ log, from: 0, handler: gate.handler });
+    const sub = subscribe({ log, from: null, handler: gate.handler });
     await gate.reached; // catch-up is applying event 0 and is now paused
 
     // Two commits land while the batch is in flight.
@@ -97,7 +106,7 @@ describe("subscribe — serialized, coalescing pump (D2-03)", () => {
     expect(gate.applied).toEqual([0, 1, 2]); // nothing dropped, in order
     expect(gate.maxActive()).toBe(1); // never two handlers at once (serialized)
     expect(log.readAllCalls).toBe(2); // one catch-up pass + one coalesced follow-up (not 3)
-    expect(sub.position).toBe(3);
+    expect(appliedIndex(sub.position)).toBe(2);
     sub.stop();
   });
 });
@@ -110,15 +119,15 @@ describe("subscribe — handler errors and stop (D2-03)", () => {
     let calls = 0;
     const handler = (event: GlobalEvent): void => {
       calls += 1;
-      if (event.globalPosition === 0) throw boom;
+      if (indexOf(event) === 0) throw boom;
     };
 
-    const sub = subscribe({ log, from: 0, handler });
+    const sub = subscribe({ log, from: null, handler });
     await sub.settled();
 
     expect(sub.failed()).toBe(boom);
     expect(calls).toBe(1); // stopped after the throwing event; event 1 never applied
-    expect(sub.position).toBe(0); // did not advance past the failure
+    expect(sub.position).toBeNull(); // did not advance past the failure
 
     log.commit(); // a later commit is not delivered — the subscription is stopped
     await sub.settled();
@@ -131,8 +140,8 @@ describe("subscribe — handler errors and stop (D2-03)", () => {
     const applied: number[] = [];
     const sub = subscribe({
       log,
-      from: 0,
-      handler: (event) => void applied.push(event.globalPosition),
+      from: null,
+      handler: (event) => void applied.push(indexOf(event)),
     });
     await sub.settled();
     expect(applied).toEqual([0]);

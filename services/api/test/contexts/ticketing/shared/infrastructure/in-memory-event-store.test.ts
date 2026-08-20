@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ConcurrencyError, NO_STREAM } from "@api/contexts/ticketing/commands/application/ports.ts";
-import { heldFact, scheduleCmd } from "../../commands/application/test-support.ts";
-
-import { InMemoryEventStore } from "@api/contexts/ticketing/shared/infrastructure/in-memory-event-store.ts";
+import { heldFact, newStore, scheduleCmd } from "../../commands/application/test-support.ts";
 
 const scheduledFact = () => {
   const command = scheduleCmd("show-1", "A1", "A2");
@@ -12,7 +10,7 @@ const scheduledFact = () => {
 
 describe("InMemoryEventStore — EventStoreDB fidelity (D1-04)", () => {
   it("reads an empty/absent stream as NO_STREAM with no events", async () => {
-    const store = new InMemoryEventStore();
+    const store = newStore();
 
     const read = await store.readStream("show-1");
 
@@ -21,13 +19,15 @@ describe("InMemoryEventStore — EventStoreDB fidelity (D1-04)", () => {
   });
 
   it("creates a stream (expected NO_STREAM) and assigns 0-based revisions", async () => {
-    const store = new InMemoryEventStore();
+    const store = newStore();
 
     const first = await store.appendToStream("show-1", NO_STREAM, [scheduledFact()]);
-    expect(first).toEqual({ revision: 0, globalPosition: 0 });
+    expect(first.revision).toBe(0);
+    expect(first.commitPosition.token).toBe("0");
 
     const second = await store.appendToStream("show-1", 0, [heldFact("h1", "buyer", 999, "A1")]);
-    expect(second).toEqual({ revision: 1, globalPosition: 1 });
+    expect(second.revision).toBe(1);
+    expect(second.commitPosition.token).toBe("1");
 
     const read = await store.readStream("show-1");
     expect(read.revision).toBe(1);
@@ -41,7 +41,7 @@ describe("InMemoryEventStore — EventStoreDB fidelity (D1-04)", () => {
   });
 
   it("throws ConcurrencyError when the expected revision has moved", async () => {
-    const store = new InMemoryEventStore();
+    const store = newStore();
     await store.appendToStream("show-1", NO_STREAM, [scheduledFact()]); // stream now at revision 0
 
     // Two writers both read revision 0 and both try to append expecting 0.
@@ -58,7 +58,7 @@ describe("InMemoryEventStore — EventStoreDB fidelity (D1-04)", () => {
   });
 
   it("rejecting a conflicting append does not mutate the stream", async () => {
-    const store = new InMemoryEventStore();
+    const store = newStore();
     await store.appendToStream("show-1", NO_STREAM, [scheduledFact()]);
 
     await store
@@ -71,7 +71,7 @@ describe("InMemoryEventStore — EventStoreDB fidelity (D1-04)", () => {
   });
 
   it("keeps streams isolated by id", async () => {
-    const store = new InMemoryEventStore();
+    const store = newStore();
     await store.appendToStream("show-1", NO_STREAM, [scheduledFact()]);
 
     expect((await store.readStream("show-2")).revision).toBe(NO_STREAM);

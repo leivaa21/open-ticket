@@ -44,7 +44,7 @@ export function registerReservationRoutes(server: FastifyInstance, deps: Reserva
     return result.ok
       ? reply
           .status(201)
-          .send({ showId: parsed.data.showId, commitPosition: result.value.commitPosition })
+          .send({ showId: parsed.data.showId, commitPosition: result.value.commitPosition.token })
       : sendRejection(reply, result.error);
   });
 
@@ -67,9 +67,10 @@ export function registerReservationRoutes(server: FastifyInstance, deps: Reserva
 
       const result = await reserveSeats(deps.useCases, parsed.data);
       return result.ok
-        ? reply
-            .status(201)
-            .send({ holdId: result.value.holdId, commitPosition: result.value.commitPosition })
+        ? reply.status(201).send({
+            holdId: result.value.holdId,
+            commitPosition: result.value.commitPosition.token,
+          })
         : sendRejection(reply, result.error);
     },
   );
@@ -90,7 +91,7 @@ export function registerReservationRoutes(server: FastifyInstance, deps: Reserva
       return result.ok
         ? reply
             .status(200)
-            .send({ status: "confirmed", commitPosition: result.value.commitPosition })
+            .send({ status: "confirmed", commitPosition: result.value.commitPosition.token })
         : sendRejection(reply, result.error);
     },
   );
@@ -110,7 +111,7 @@ export function registerReservationRoutes(server: FastifyInstance, deps: Reserva
       return result.ok
         ? reply
             .status(200)
-            .send({ status: "released", commitPosition: result.value.commitPosition })
+            .send({ status: "released", commitPosition: result.value.commitPosition.token })
         : sendRejection(reply, result.error);
     },
   );

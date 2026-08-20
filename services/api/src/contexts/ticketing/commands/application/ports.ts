@@ -1,5 +1,7 @@
 import type { DomainEventFact, HoldId, PersistedEvent } from "@open-ticket/contracts";
 
+import type { Position } from "../../shared/application/index.ts";
+
 /**
  * Ports the use cases orchestrate the domain through (hexagonal, dependency-inward). Interfaces
  * are declared here; `infrastructure/` provides adapters. The domain-facing code knows only these.
@@ -22,10 +24,11 @@ export interface AppendResult {
   /** The stream's new last revision after the append (per-stream, optimistic concurrency). */
   readonly revision: number;
   /**
-   * The global `$all` position of the LAST appended event — the write's commit position. A reader
-   * comparing a projection's `asOf` to this knows whether its write is visible yet (D2-05).
+   * The global `$all` position of the LAST appended event — the write's commit position, and an
+   * opaque token since D4-01. Read-your-writes is still `asOf >= commitPosition`, evaluated
+   * through `Position.compareTo` by whoever holds both (the server), not by subtracting numbers.
    */
-  readonly globalPosition: number;
+  readonly commitPosition: Position;
 }
 
 /**

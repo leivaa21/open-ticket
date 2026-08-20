@@ -22,12 +22,12 @@ class FakeEventSource implements EventSourceLike {
   }
 }
 
-const view = (asOf: number): SeatMapView =>
+const view = (asOf: string): SeatMapView =>
   ({ showId: "show-1", asOf, seats: [{ seatId: "A1", status: "available" }] }) as SeatMapView;
 
 describe("parseSeatMapView", () => {
   it("parses a well-formed frame and rejects malformed ones", () => {
-    expect(parseSeatMapView(JSON.stringify(view(2)))?.asOf).toBe(2);
+    expect(parseSeatMapView(JSON.stringify(view("2")))?.asOf).toBe("2");
     expect(parseSeatMapView("not json")).toBeUndefined();
     expect(parseSeatMapView(JSON.stringify({ nope: true }))).toBeUndefined();
   });
@@ -47,11 +47,11 @@ describe("subscribeSeatMap", () => {
 
     const unsubscribe = subscribeSeatMap("show-1", onFrame, onError, () => source);
 
-    source.emit("seatmap", JSON.stringify(view(1)));
+    source.emit("seatmap", JSON.stringify(view("1")));
     source.emit("seatmap", "garbage"); // ignored, not delivered
-    source.emit("seatmap", JSON.stringify(view(2)));
+    source.emit("seatmap", JSON.stringify(view("2")));
     expect(onFrame).toHaveBeenCalledTimes(2);
-    expect(onFrame).toHaveBeenLastCalledWith(expect.objectContaining({ asOf: 2 }));
+    expect(onFrame).toHaveBeenLastCalledWith(expect.objectContaining({ asOf: "2" }));
 
     source.emit("error", "");
     expect(onError).toHaveBeenCalledOnce();

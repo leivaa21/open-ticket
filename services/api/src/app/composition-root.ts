@@ -17,15 +17,17 @@ import type { Config } from "./config.ts";
 /**
  * Composition root — the only place the interface layer touches infrastructure. Wires config +
  * real adapters into the server. ONE `InMemoryEventStore` is both the write `EventStore` and the
- * read `EventLog`; a single `Projector` subscribes to it from position 0 and stays live, catching
- * up as writes append (in-memory + rebuildable — durable projections are M4). The write side and
- * the read side share one `SystemClock`, so hold liveness is judged against the same time source.
+ * read `EventLog`; a single `Projector` subscribes to it from the start of the log and stays live,
+ * catching up as writes append (in-memory + rebuildable — durable projections are M4). One
+ * `SystemClock` is shared by the write side, the read side AND the store: hold liveness is judged
+ * against the same time source that stamps each event's `recordedAt`, so projection lag is
+ * measured on the same clock it is created on.
  */
 export function buildApp(config: Config): FastifyInstance {
-  const store = new InMemoryEventStore();
   const clock = new SystemClock();
+  const store = new InMemoryEventStore(clock);
   const broadcaster = new Broadcaster();
-  const projector = new Projector({ log: store, broadcaster });
+  const projector = new Projector({ log: store, clock, broadcaster });
   return buildServer({
     useCases: {
       store,

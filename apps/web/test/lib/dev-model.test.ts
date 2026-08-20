@@ -1,38 +1,62 @@
 import type { DevAppended, DevLag } from "@open-ticket/contracts";
 import { describe, expect, it } from "vitest";
 
-import { eventTypeColor, lagFraction, lagState, pushEvent } from "@/lib/dev-model.ts";
+import {
+  eventTypeColor,
+  formatLag,
+  LAG_SCALE_MS,
+  lagFraction,
+  lagState,
+  pushEvent,
+} from "@/lib/dev-model.ts";
 
-const appended = (position: number): DevAppended => ({ position, type: "SeatsHeld", showId: "s" });
-const lag = (head: number, asOf: number, behind: number): DevLag => ({ head, asOf, behind });
+const appended = (position: string): DevAppended => ({ position, type: "SeatsHeld", showId: "s" });
+const lag = (behindMs: number): DevLag => ({ behindMs });
 
 describe("pushEvent — bounded rolling buffer", () => {
   it("prepends the newest event (newest first)", () => {
-    const buffer = pushEvent([appended(1)], appended(2), 50);
-    expect(buffer.map((event) => event.position)).toEqual([2, 1]);
+    const buffer = pushEvent([appended("1")], appended("2"), 50);
+    expect(buffer.map((event) => event.position)).toEqual(["2", "1"]);
   });
 
   it("caps the buffer at max, dropping the oldest", () => {
-    const filled = [appended(3), appended(2), appended(1)];
-    expect(pushEvent(filled, appended(4), 3).map((event) => event.position)).toEqual([4, 3, 2]);
+    const filled = [appended("3"), appended("2"), appended("1")];
+    expect(pushEvent(filled, appended("4"), 3).map((event) => event.position)).toEqual([
+      "4",
+      "3",
+      "2",
+    ]);
   });
 });
 
 describe("lagState / lagFraction", () => {
-  it("is caught-up (full) when behind is 0", () => {
-    expect(lagState(lag(5, 4, 0))).toBe("caught-up");
-    expect(lagFraction(lag(5, 4, 0))).toBe(1);
+  it("is caught-up (full bar) at zero — the one value that means 'reached the head'", () => {
+    expect(lagState(lag(0))).toBe("caught-up");
+    expect(lagFraction(lag(0))).toBe(1);
   });
 
-  it("is behind (partial fill) when behind > 0", () => {
-    expect(lagState(lag(4, 2, 1))).toBe("behind");
-    expect(lagFraction(lag(4, 2, 1))).toBe(0.75); // processed 3 of 4
-    expect(lagFraction(lag(5, -1, 5))).toBe(0); // nothing processed
+  it("drains the bar as the projection falls behind", () => {
+    expect(lagState(lag(1))).toBe("behind"); // a single millisecond is still behind
+    expect(lagFraction(lag(LAG_SCALE_MS / 4))).toBe(0.75);
+    expect(lagFraction(lag(LAG_SCALE_MS))).toBe(0);
   });
 
-  it("reads caught-up with an empty log (head 0)", () => {
-    expect(lagFraction(lag(0, -1, 0))).toBe(1);
-    expect(lagState(lag(0, -1, 0))).toBe("caught-up");
+  it("bottoms out rather than going negative past the scale", () => {
+    expect(lagFraction(lag(LAG_SCALE_MS * 10))).toBe(0);
+  });
+
+  it("renders without an event count — a store that cannot count omits it", () => {
+    const withCount: DevLag = { behindMs: 250, behindEvents: 4 };
+    expect(lagState(withCount)).toBe("behind");
+    expect(lagState(lag(250))).toBe("behind");
+  });
+});
+
+describe("formatLag", () => {
+  it("reads in ms below a second and in seconds above it", () => {
+    expect(formatLag(0)).toBe("0ms");
+    expect(formatLag(840)).toBe("840ms");
+    expect(formatLag(2412)).toBe("2.4s");
   });
 });
 

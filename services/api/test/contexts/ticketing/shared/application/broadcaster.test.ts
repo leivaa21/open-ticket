@@ -8,9 +8,9 @@ describe("Broadcaster (D3-03)", () => {
     const listener = vi.fn();
     broadcaster.on("appended", listener);
 
-    broadcaster.emit("appended", { position: 3, type: "SeatsHeld", showId: "show-1" });
+    broadcaster.emit("appended", { position: "3", type: "SeatsHeld", showId: "show-1" });
 
-    expect(listener).toHaveBeenCalledWith({ position: 3, type: "SeatsHeld", showId: "show-1" });
+    expect(listener).toHaveBeenCalledWith({ position: "3", type: "SeatsHeld", showId: "show-1" });
   });
 
   it("unsubscribe stops delivery and drops the listener count to 0", () => {
@@ -20,7 +20,7 @@ describe("Broadcaster (D3-03)", () => {
     expect(broadcaster.listenerCount("lag")).toBe(1);
 
     off();
-    broadcaster.emit("lag", { head: 1, asOf: 0, behind: 0 });
+    broadcaster.emit("lag", { behindMs: 0, behindEvents: 0 });
 
     expect(listener).not.toHaveBeenCalled();
     expect(broadcaster.listenerCount("lag")).toBe(0);

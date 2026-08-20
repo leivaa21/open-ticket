@@ -7,4 +7,5 @@
  */
 
 export { InMemoryEventStore } from "./in-memory-event-store.ts";
+export { LogPosition } from "./log-position.ts";
 export { SystemClock, UuidGenerator } from "./system-adapters.ts";

@@ -82,11 +82,21 @@ export class SequentialIds implements IdGenerator {
   }
 }
 
+/**
+ * An in-memory store on a fixed clock — the default for tests that don't care what `recordedAt`
+ * says, only that it is deterministic.
+ */
+export const newStore = (clock: Clock = new FixedClock(1_000)): InMemoryEventStore =>
+  new InMemoryEventStore(clock);
+
 /** Assemble use-case deps with sensible defaults; override any port or policy per test. */
 export function makeDeps(overrides: Partial<UseCaseDeps> = {}): UseCaseDeps {
+  // One clock for the use cases AND the default store: the store stamps `recordedAt` from it, so
+  // sharing keeps a test's event times on the same timeline its hold expiry is judged against.
+  const clock = overrides.clock ?? new FixedClock(1_000);
   return {
-    store: overrides.store ?? new InMemoryEventStore(),
-    clock: overrides.clock ?? new FixedClock(1_000),
+    store: overrides.store ?? newStore(clock),
+    clock,
     ids: overrides.ids ?? new SequentialIds(),
     holdTtlMs: overrides.holdTtlMs ?? 600_000,
     maxAttempts: overrides.maxAttempts ?? 3,

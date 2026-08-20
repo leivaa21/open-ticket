@@ -48,11 +48,12 @@ export interface TestServerOptions {
 }
 
 export function buildTestServer(options: TestServerOptions = {}): TestServer {
-  const store = new InMemoryEventStore();
   const clock = new MutableClock(1_000);
+  const store = new InMemoryEventStore(clock);
   const broadcaster = new Broadcaster();
   const projector = new Projector({
     log: store,
+    clock,
     broadcaster,
     ...(options.reducer !== undefined ? { reducer: options.reducer } : {}),
   });
