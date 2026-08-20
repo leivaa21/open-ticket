@@ -8,7 +8,7 @@ import type {
 
 import { decide } from "../domain/index.ts";
 import type { DecideResult } from "../domain/index.ts";
-import type { Clock } from "../../shared/application/index.ts";
+import type { Clock, Position } from "../../shared/application/index.ts";
 
 import { commitWithRetry } from "./optimistic.ts";
 import type { PlanResult } from "./optimistic.ts";
@@ -28,7 +28,7 @@ export interface CommitOutcome {
   /** Per-stream revision of the last appended event. */
   readonly revision: number;
   /** Global `$all` commit position — compare to a read's `asOf` for read-your-writes (D2-05). */
-  readonly commitPosition: number;
+  readonly commitPosition: Position;
 }
 export interface ReserveOutcome extends CommitOutcome {
   readonly holdId: HoldId;
@@ -64,7 +64,7 @@ export function reserveSeats(
     return toPlan(result, (append) => ({
       holdId,
       revision: append.revision,
-      commitPosition: append.globalPosition,
+      commitPosition: append.commitPosition,
     }));
   });
 }
@@ -96,5 +96,5 @@ function toPlan<T>(result: DecideResult, toValue: (append: AppendResult) => T): 
 
 const toRevision = (append: AppendResult): CommitOutcome => ({
   revision: append.revision,
-  commitPosition: append.globalPosition,
+  commitPosition: append.commitPosition,
 });

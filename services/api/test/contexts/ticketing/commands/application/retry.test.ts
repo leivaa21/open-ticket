@@ -1,15 +1,13 @@
 import type { DomainEventFact } from "@open-ticket/contracts";
 import { describe, expect, it } from "vitest";
 
-import { InMemoryEventStore } from "@api/contexts/ticketing/shared/infrastructure/in-memory-event-store.ts";
-
 import { ConcurrencyError } from "@api/contexts/ticketing/commands/application/ports.ts";
 import type {
   AppendResult,
   EventStore,
   ReadResult,
 } from "@api/contexts/ticketing/commands/application/ports.ts";
-import { heldFact, makeDeps, reserveCmd, scheduleCmd } from "./test-support.ts";
+import { heldFact, makeDeps, newStore, reserveCmd, scheduleCmd } from "./test-support.ts";
 import {
   reserveSeats,
   scheduleShow,
@@ -50,7 +48,7 @@ class ScriptedConflictStore implements EventStore {
 
 describe("optimistic retry (D1-05)", () => {
   it("retries past a conflict and succeeds when the seat is still free", async () => {
-    const inner = new InMemoryEventStore();
+    const inner = newStore();
     await scheduleShow(makeDeps({ store: inner }), scheduleCmd("show-1", "A1", "A2"));
 
     // On the first append, a competing writer holds A2 (an unrelated seat), moving the revision.
@@ -71,7 +69,7 @@ describe("optimistic retry (D1-05)", () => {
   });
 
   it("surfaces a typed Conflict after the retry budget is exhausted", async () => {
-    const inner = new InMemoryEventStore();
+    const inner = newStore();
     await scheduleShow(makeDeps({ store: inner }), scheduleCmd("show-1", "A1"));
 
     const alwaysConflict = new ScriptedConflictStore(inner, () => true); // every append conflicts

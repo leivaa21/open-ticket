@@ -10,7 +10,7 @@ import type { DevAppended, DevLag } from "@open-ticket/contracts";
  * `DevAppended`/`DevLag` shapes — the API and the web dashboard share one definition (no fork).
  */
 
-/** The projection's position relative to the write head (for the dashboard lag meter). */
+/** How far the projection trails the write head, in time (D4-01) — the dashboard lag meter. */
 export type LagSnapshot = DevLag;
 
 export interface BroadcastEvents {

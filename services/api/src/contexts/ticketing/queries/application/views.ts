@@ -1,6 +1,7 @@
 import { ShowId } from "@open-ticket/contracts";
 import type { AvailabilityView, SeatMapView } from "@open-ticket/contracts";
 
+import { tokenOf } from "../../shared/application/index.ts";
 import type { Clock } from "../../shared/application/index.ts";
 import { availabilityAsOf, seatMapAsOf } from "../domain/index.ts";
 import type { Projector } from "./projector.ts";
@@ -15,7 +16,7 @@ export function buildSeatMapView(projector: Projector, clock: Clock, showId: str
   const state = projector.getSeatMap(showId) ?? { seats: new Map() };
   return {
     showId: ShowId.parse(showId),
-    asOf: projector.asOf(),
+    asOf: tokenOf(projector.asOf()),
     seats: [...seatMapAsOf(state, clock.now())],
   };
 }
@@ -28,7 +29,7 @@ export function buildAvailabilityView(
   const state = projector.getSeatMap(showId) ?? { seats: new Map() };
   return {
     showId: ShowId.parse(showId),
-    asOf: projector.asOf(),
+    asOf: tokenOf(projector.asOf()),
     ...availabilityAsOf(state, clock.now()),
   };
 }

@@ -41,7 +41,8 @@ describe("the reservation flow over HTTP (schedule → reserve → confirm)", ()
     });
     expect(confirmed.statusCode).toBe(200);
     expect(confirmed.json()).toMatchObject({ status: "confirmed" });
-    expect(confirmed.json<{ commitPosition: number }>().commitPosition).toBeGreaterThanOrEqual(0);
+    // An opaque token on the wire (D4-01) — a client may hold and echo it, never order it.
+    expect(confirmed.json<{ commitPosition: string }>().commitPosition).toEqual(expect.any(String));
   });
 
   it("releases a hold, freeing the seat for another reservation", async () => {
@@ -61,7 +62,7 @@ describe("the reservation flow over HTTP (schedule → reserve → confirm)", ()
     });
     expect(released.statusCode).toBe(200);
     expect(released.json()).toMatchObject({ status: "released" });
-    expect(released.json<{ commitPosition: number }>().commitPosition).toBeGreaterThanOrEqual(0);
+    expect(released.json<{ commitPosition: string }>().commitPosition).toEqual(expect.any(String));
 
     // The seat is available again.
     const reReserved = await server.inject({

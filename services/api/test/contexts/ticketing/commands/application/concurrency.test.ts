@@ -1,14 +1,19 @@
 import type { DomainEventFact } from "@open-ticket/contracts";
 import { describe, expect, it } from "vitest";
 
-import { InMemoryEventStore } from "@api/contexts/ticketing/shared/infrastructure/in-memory-event-store.ts";
-
 import type {
   AppendResult,
   EventStore,
   ReadResult,
 } from "@api/contexts/ticketing/commands/application/ports.ts";
-import { confirmCmd, makeDeps, reserveCmd, scheduleCmd, SequentialIds } from "./test-support.ts";
+import {
+  confirmCmd,
+  makeDeps,
+  newStore,
+  reserveCmd,
+  scheduleCmd,
+  SequentialIds,
+} from "./test-support.ts";
 import {
   confirmPurchase,
   reserveSeats,
@@ -57,7 +62,7 @@ class BarrierStore implements EventStore {
 
 describe("THE concurrency race — two reservations for the same seat (D1-05)", () => {
   it("lets exactly one win; the other retries, re-reads, and fails SeatsUnavailable", async () => {
-    const inner = new InMemoryEventStore();
+    const inner = newStore();
     await scheduleShow(makeDeps({ store: inner }), scheduleCmd("show-1", "A1", "A2"));
 
     const store = new BarrierStore(inner, 2);
@@ -91,7 +96,7 @@ describe("THE concurrency race — two reservations for the same seat (D1-05)", 
   });
 
   it("lets exactly one confirm sell a hold; the other retries and fails HoldNotFound (no double-sell)", async () => {
-    const inner = new InMemoryEventStore();
+    const inner = newStore();
     const setup = makeDeps({ store: inner });
     await scheduleShow(setup, scheduleCmd("show-1", "A1"));
     const reserved = await reserveSeats(setup, reserveCmd("show-1", "alice", "A1"));

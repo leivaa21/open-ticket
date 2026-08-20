@@ -3,8 +3,8 @@ import type { SeatMapView } from "@open-ticket/contracts";
 import { countByStatus } from "@/lib/seat-logic";
 
 /**
- * The show header: title, short show id, a pulsing live/asOf indicator (the projection position
- * the map reflects), and availability counts. `asOf` advancing as seats change is the visible
+ * The show header: title, short show id, a pulsing live/asOf indicator (the opaque projection
+ * position the map reflects), and availability counts. `asOf` moving as seats change is the visible
  * "eventually consistent, catching up" signal.
  */
 export function ShowHeader({
@@ -33,7 +33,7 @@ export function ShowHeader({
             aria-hidden
           />
           {live ? "live" : "reconnecting…"}
-          <span className="font-mono text-xs text-slate-600">asOf {view.asOf}</span>
+          <span className="font-mono text-xs text-slate-600">asOf {view.asOf ?? "—"}</span>
         </span>
         <span className="text-slate-400">
           <span className="font-semibold text-slate-200">{counts.available}</span> available ·{" "}

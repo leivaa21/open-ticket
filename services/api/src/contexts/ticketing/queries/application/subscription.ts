@@ -1,4 +1,5 @@
-import type { EventLog, GlobalEvent, GlobalPosition } from "./event-log.ts";
+import type { Position } from "../../shared/application/index.ts";
+import type { EventLog, GlobalEvent } from "./event-log.ts";
 
 /**
  * A catch-up subscription primitive (D2-03): replay `readAll` from a position, apply each event
@@ -22,18 +23,19 @@ export const microtaskScheduler: Scheduler = {
 
 export interface SubscribeOptions {
   readonly log: EventLog;
-  /** Where to start replaying (0 = from the beginning of the log). */
-  readonly from: GlobalPosition;
+  /** The last position already applied — read resumes strictly after it. `null` = from the start. */
+  readonly from: Position | null;
   /** Applies one event; may be async. A throw stops the subscription and is exposed via `failed()`. */
   readonly handler: (event: GlobalEvent) => void | Promise<void>;
   readonly scheduler?: Scheduler;
 }
 
 export interface Subscription {
-  /** The next global position to consume — advances as events are applied. Public for lag. */
-  readonly position: GlobalPosition;
-  /** `log head − position` (≥ 0): how far the subscription trails the log right now. */
-  lag(): Promise<number>;
+  /**
+   * The last position applied, or `null` before the first. Not "the next one to consume": an
+   * opaque position has no successor (D4-01), so a catch-up reader can only name where it got to.
+   */
+  readonly position: Position | null;
   /** Resolves when the pump is idle — the test drain seam. Never rejects; see `failed()`. */
   settled(): Promise<void>;
   /** The handler error that stopped the subscription, or `undefined`. */
@@ -46,7 +48,7 @@ export function subscribe(options: SubscribeOptions): Subscription {
   const { log, handler } = options;
   const scheduler = options.scheduler ?? microtaskScheduler;
 
-  let position = options.from;
+  let position: Position | null = options.from;
   let idle: Promise<void> = Promise.resolve();
   let unsubscribeFromLog: () => void = () => undefined;
   // Held on an object so TS doesn't narrow the closure-mutated flags to literals across the `await`
@@ -73,7 +75,7 @@ export function subscribe(options: SubscribeOptions): Subscription {
         for (const event of events) {
           if (isStopped()) return;
           await handler(event);
-          position = event.globalPosition + 1;
+          position = event.position;
         }
       }
     } finally {
@@ -103,12 +105,6 @@ export function subscribe(options: SubscribeOptions): Subscription {
   return {
     get position() {
       return position;
-    },
-    async lag() {
-      const { head } = await log.readAll(position);
-      // Clamped: a subscription resumed from a position beyond head (a caller error) reads 0, not
-      // negative — lag is "events still to consume", never below zero.
-      return Math.max(0, head - position);
     },
     settled() {
       return idle;

@@ -50,12 +50,19 @@ curl -sX POST localhost:5210/shows/$SHOW/reservations -H 'content-type: applicat
   -d '{"seatIds":["A1"],"holderId":"buyer-2"}'      # {"error":{"type":"SeatsUnavailable","seatIds":["A1"]}}
 
 # Read the seat map — served from a projection, eventually consistent
-curl -s localhost:5210/shows/$SHOW/seats            # {"asOf":1,"seats":[{"seatId":"A1","status":"held"},…]}
+curl -s localhost:5210/shows/$SHOW/seats            # {"asOf":"1","seats":[{"seatId":"A1","status":"held"},…]}
 ```
 
 Fire 20 of that second call concurrently and exactly one wins — verified against the running
-server, not just in tests. The write returns a `commitPosition`; the read exposes `asOf` — once
-`asOf >= commitPosition`, your write is visible (read-your-writes across the CQRS boundary).
+server, not just in tests. Watch the seat map flip `available → held` a moment after the write
+returns: that gap *is* the CQRS read side catching up.
+
+The write returns a `commitPosition` and the read exposes an `asOf` marker — both **opaque
+tokens**. Read-your-writes is still "`asOf >= commitPosition` means your write is visible", but
+that comparison is the server's to make, not yours: a token is not a number, and only the store's
+adapter knows how to order two of them. (It used to be a counter, which was true of the in-memory
+log and false of EventStoreDB, whose `$all` positions are byte offsets — see
+[D4-01](docs/decisions.md).)
 
 ## Architecture
 

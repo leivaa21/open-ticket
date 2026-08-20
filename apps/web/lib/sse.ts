@@ -54,7 +54,7 @@ function isSeatMapView(value: unknown): value is SeatMapView {
   const record = value as Record<string, unknown>;
   return (
     typeof record.showId === "string" &&
-    typeof record.asOf === "number" &&
+    (typeof record.asOf === "string" || record.asOf === null) &&
     Array.isArray(record.seats)
   );
 }

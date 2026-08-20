@@ -61,7 +61,10 @@ describe("GET /shows/:showId/seats/stream (D3-02)", () => {
     expect(update.event).toBe("seatmap");
     const updatedView = JSON.parse(update.data) as SeatMapView;
     expect(updatedView.seats.find((seat) => seat.seatId === "A1")?.status).toBe("held");
-    expect(updatedView.asOf).toBeGreaterThanOrEqual(initialView.asOf);
+    // Opaque tokens (D4-01): a client cannot order two of them, so what it observes is that the
+    // projection marker MOVED as the seat changed — not that it grew.
+    expect(updatedView.asOf).not.toBeNull();
+    expect(updatedView.asOf).not.toBe(initialView.asOf);
 
     // Disconnect → the server unsubscribes (no leak).
     client.close();
@@ -84,18 +87,19 @@ describe("GET /dev/stream (D3-02)", () => {
     const client = connectSse(`${base}/dev/stream`);
     const initialLag = await client.next();
     expect(initialLag.event).toBe("lag");
-    expect(JSON.parse(initialLag.data)).toEqual({ head: 0, asOf: -1, behind: 0 });
+    // Nothing appended and nothing projected — caught up, and the frame says so in time.
+    expect(JSON.parse(initialLag.data)).toEqual({ behindMs: 0, behindEvents: 0 });
 
     await ts.server.inject({ method: "POST", url: "/shows", payload: { seatIds: ["A1"] } });
     await ts.projector.settled();
 
     const appended = await client.next();
     expect(appended.event).toBe("appended");
-    expect(JSON.parse(appended.data)).toMatchObject({ position: 0, type: "ShowScheduled" });
+    expect(JSON.parse(appended.data)).toMatchObject({ position: "0", type: "ShowScheduled" });
 
     const lag = await client.next();
     expect(lag.event).toBe("lag");
-    expect(JSON.parse(lag.data)).toEqual({ head: 1, asOf: 0, behind: 0 });
+    expect(JSON.parse(lag.data)).toEqual({ behindMs: 0, behindEvents: 0 });
 
     client.close();
   });

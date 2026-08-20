@@ -24,7 +24,7 @@ export function devStreamUrl(): string {
 export function parseAppended(raw: string): DevAppended | undefined {
   const value = parseJson(raw);
   if (value === undefined) return undefined;
-  return typeof value.position === "number" &&
+  return typeof value.position === "string" &&
     typeof value.type === "string" &&
     typeof value.showId === "string"
     ? { position: value.position, type: value.type, showId: value.showId }
@@ -34,11 +34,13 @@ export function parseAppended(raw: string): DevAppended | undefined {
 export function parseLag(raw: string): DevLag | undefined {
   const value = parseJson(raw);
   if (value === undefined) return undefined;
-  return typeof value.head === "number" &&
-    typeof value.asOf === "number" &&
-    typeof value.behind === "number"
-    ? { head: value.head, asOf: value.asOf, behind: value.behind }
-    : undefined;
+  if (typeof value.behindMs !== "number") return undefined;
+  // `behindEvents` is optional on the wire (D4-01): a store that cannot count events omits it, and
+  // omitted must stay omitted here — coercing it to 0 would render "caught up" for a lagging
+  // EventStoreDB projection.
+  return typeof value.behindEvents === "number"
+    ? { behindMs: value.behindMs, behindEvents: value.behindEvents }
+    : { behindMs: value.behindMs };
 }
 
 export function subscribeDevStream(options: SubscribeDevStreamOptions): () => void {

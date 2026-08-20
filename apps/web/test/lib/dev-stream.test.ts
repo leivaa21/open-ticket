@@ -21,17 +21,17 @@ class FakeEventSource implements EventSourceLike {
   }
 }
 
-const appended: DevAppended = { position: 3, type: "SeatsHeld", showId: "show-1" };
-const lag: DevLag = { head: 5, asOf: 2, behind: 2 };
+const appended: DevAppended = { position: "3", type: "SeatsHeld", showId: "show-1" };
+const lag: DevLag = { behindMs: 2412, behindEvents: 2 };
 
 describe("parseAppended / parseLag", () => {
   it("parses well-formed frames and rejects malformed ones", () => {
     expect(parseAppended(JSON.stringify(appended))).toEqual(appended);
     expect(parseAppended("not json")).toBeUndefined();
-    expect(parseAppended(JSON.stringify({ position: "x" }))).toBeUndefined();
+    expect(parseAppended(JSON.stringify({ position: 3 }))).toBeUndefined();
 
     expect(parseLag(JSON.stringify(lag))).toEqual(lag);
-    expect(parseLag(JSON.stringify({ head: 1 }))).toBeUndefined();
+    expect(parseLag(JSON.stringify({ behindEvents: 1 }))).toBeUndefined();
   });
 });
 

@@ -1,11 +1,16 @@
 import type { DevLag } from "@open-ticket/contracts";
 
-import { lagFraction, lagState } from "@/lib/dev-model";
+import { formatLag, lagFraction, lagState } from "@/lib/dev-model";
 
 /**
- * The projection-lag meter (D3-02 centerpiece): head vs asOf and how many events the projection
- * still trails by. The bar fills as the projection catches up — full + teal when caught up, partial
- * + amber while behind. In-memory lag is ~0 almost always (calm); M4's throttle makes it recede.
+ * The projection-lag meter (D3-02 centerpiece), reading in **time** since D4-01: how stale the
+ * read model's data is right now. The bar drains as the projection falls behind and refills as it
+ * catches up — full + teal at zero, partial + amber while behind.
+ *
+ * The event count rides along only when the store can produce one for free (the in-memory log
+ * can; EventStoreDB cannot), so its tile is conditional — an absent count is not a zero. Raw
+ * positions are deliberately not shown: they are opaque tokens, and a number you cannot order is
+ * noise in a meter.
  */
 export function LagMeter({ lag }: { lag: DevLag | null }) {
   if (lag === null) {
@@ -19,6 +24,7 @@ export function LagMeter({ lag }: { lag: DevLag | null }) {
 
   const caught = lagState(lag) === "caught-up";
   const percent = Math.round(lagFraction(lag) * 100);
+  const readout = caught ? "caught up" : `${formatLag(lag.behindMs)} behind`;
 
   return (
     <section aria-label="projection lag" className="rounded-xl border border-line bg-panel p-5">
@@ -31,7 +37,7 @@ export function LagMeter({ lag }: { lag: DevLag | null }) {
             className={`inline-block h-1.5 w-1.5 rounded-full ${caught ? "bg-mine" : "live-dot bg-held"}`}
             aria-hidden
           />
-          {caught ? "caught up" : `${String(lag.behind)} behind`}
+          {readout}
         </span>
       </div>
 
@@ -41,7 +47,7 @@ export function LagMeter({ lag }: { lag: DevLag | null }) {
         aria-valuenow={percent}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-valuetext={caught ? "caught up" : `${String(lag.behind)} events behind`}
+        aria-valuetext={readout}
         aria-label="projection caught up"
       >
         <div
@@ -50,10 +56,11 @@ export function LagMeter({ lag }: { lag: DevLag | null }) {
         />
       </div>
 
-      <dl className="mt-4 grid grid-cols-3 gap-3">
-        <Stat label="head" value={lag.head} />
-        <Stat label="asOf" value={lag.asOf} />
-        <Stat label="behind" value={lag.behind} highlight={!caught} />
+      <dl className="mt-4 grid grid-cols-2 gap-3">
+        <Stat label="behind" value={formatLag(lag.behindMs)} highlight={!caught} />
+        {lag.behindEvents !== undefined && (
+          <Stat label="events" value={String(lag.behindEvents)} highlight={!caught} />
+        )}
       </dl>
     </section>
   );
@@ -65,7 +72,7 @@ function Stat({
   highlight = false,
 }: {
   label: string;
-  value: number;
+  value: string;
   highlight?: boolean;
 }) {
   return (
